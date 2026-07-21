@@ -1,3 +1,4 @@
+import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 import {
   CircleCheckIcon,
@@ -6,20 +7,13 @@ import {
   OctagonXIcon,
   Loader2Icon,
 } from 'lucide-react'
-import { useTheme } from '@/hooks/use-theme'
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // This project has its own theme system (see @/hooks/use-theme), not next-themes,
-  // which the shadcn CLI assumes. Our provider adds a `light`/`dark` class to <html>,
-  // and the CSS variables below follow that class — so we just hand Sonner a value it
-  // understands. Our extra `auto` (time-based) mode maps to `system` here.
-  const { theme } = useTheme()
-  const sonnerTheme: ToasterProps['theme'] =
-    theme === 'light' || theme === 'dark' ? theme : 'system'
+  const { theme = 'system' } = useTheme()
 
   return (
     <Sonner
-      theme={sonnerTheme}
+      theme={theme as ToasterProps['theme']}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
