@@ -3,4 +3,8 @@ export const paths = {
     path: '/',
     getHref: () => '/',
   },
+  devTokens: {
+    path: '/dev/tokens',
+    getHref: () => '/dev/tokens',
+  },
 } as const

@@ -15,6 +15,10 @@ export const router = createBrowserRouter([
         lazy: () => import('./pages/home').then((module) => ({ Component: module.default })),
         HydrateFallback: HomeLoadingSkeleton,
       },
+      {
+        path: paths.devTokens.path,
+        lazy: () => import('./pages/dev-tokens').then((module) => ({ Component: module.default })),
+      },
       { path: '*', Component: NotFoundPage },
     ],
   },
