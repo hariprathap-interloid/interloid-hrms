@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # env.ts validates VITE_API_URL etc. at import time, and vite.config.ts reads
+      # VITE_API_URL at build-config time too — both need real values, even in CI.
+      # .env.example's placeholders are enough for type-check/lint/test/build to run.
+      - name: Set up env
+        run: cp .env.example .env
+
+      - name: Type-check
+        run: npx tsc -b
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

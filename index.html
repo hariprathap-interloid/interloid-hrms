@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="%VITE_APP_DESCRIPTION%" />
+    <title>%VITE_APP_NAME%</title>
+    <!-- Must load before src/app/main.tsx so window.__ENV__ exists when src/config/env.ts
+         runs. In Docker this file is regenerated per container start; see
+         docker/generate-env-config.sh and learning.md. -->
+    <script src="/env-config.js"></script>
+    <script>
+      // Keep DAY_START_HOUR/DAY_END_HOUR in sync with src/lib/theme.ts. Runs synchronously,
+      // before first paint, so the correct theme class is set without a flash of the wrong
+      // theme. VITE_THEME_STORAGE_KEY is substituted by Vite's HTML env replacement.
+      ;(function () {
+        try {
+          var STORAGE_KEY = '%VITE_THEME_STORAGE_KEY%'
+          var stored = localStorage.getItem(STORAGE_KEY)
+          var theme = ['light', 'dark', 'system', 'auto'].indexOf(stored) !== -1 ? stored : 'system'
+          var resolved
+          if (theme === 'system') {
+            resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          } else if (theme === 'auto') {
+            var hour = new Date().getHours()
+            resolved = hour >= 6 && hour < 18 ? 'light' : 'dark'
+          } else {
+            resolved = theme
+          }
+          document.documentElement.classList.add(resolved)
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

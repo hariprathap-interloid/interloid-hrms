@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-ssr
+.git
+.husky
+.env
+.env.*
+!.env.example
+*.log
+.vscode
+.idea

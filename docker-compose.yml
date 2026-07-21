@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Build-time only — see Dockerfile. Reusing .env's value here is a convenience for
+        # local `docker compose up --build`, not a requirement; it can build successfully
+        # with no VITE_API_URL at all (falls back to the Dockerfile's default).
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+        VITE_APP_DESCRIPTION: ${VITE_APP_DESCRIPTION}
+    environment:
+      # The value that actually matters at runtime — read by docker/generate-env-config.sh
+      # when the container starts. Change this (or override per environment) and restart
+      # the container; no rebuild needed, unlike the build args above.
+      VITE_API_URL: ${VITE_API_URL}
+    ports:
+      - '8080:80'

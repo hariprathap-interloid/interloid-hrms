@@ -1,0 +1,21 @@
+import { createBrowserRouter } from 'react-router-dom'
+import { paths } from '@/config/paths'
+import { MainLayout } from './layouts/main-layout'
+import ErrorPage from './pages/error'
+import NotFoundPage from './pages/not-found'
+import HomeLoadingSkeleton from '@/skeletons/home'
+
+export const router = createBrowserRouter([
+  {
+    element: <MainLayout />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: paths.home.path,
+        lazy: () => import('./pages/home').then((module) => ({ Component: module.default })),
+        HydrateFallback: HomeLoadingSkeleton,
+      },
+      { path: '*', Component: NotFoundPage },
+    ],
+  },
+])
