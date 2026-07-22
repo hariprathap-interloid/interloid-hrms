@@ -98,14 +98,8 @@
   /* Radius base (scale exposed via @theme below) */
   --radius: 10px;
 
-  /* 4px spacing scale (raw tokens; Tailwind's own spacing scale is untouched) */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
+  /* Note: the design's --space-1…12 map 1:1 onto Tailwind's default 4px spacing
+     scale (p-1=4px … p-12=48px at the 16px root), so they are not redefined. */
 
   /* Font stacks */
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -364,6 +358,31 @@
   }
   to {
     opacity: 1;
+    transform: none;
+  }
+}
+/* Overlay / sheet / drawer entrances (from the design-system page) */
+@keyframes iws-overlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes iws-sheet-r {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes iws-drawer-b {
+  from {
+    transform: translateY(100%);
+  }
+  to {
     transform: none;
   }
 }

@@ -362,21 +362,11 @@ export const unmappedTokens: UnmappedToken[] = [
   {
     token: '--space-1 … --space-12',
     reason:
-      "Raw vars only. Not wired into Tailwind's spacing scale (its default 4px grid already matches these).",
+      "Resolved: these map 1:1 onto Tailwind's default 4px scale (p-1=4px … p-12=48px at the 16px root), so the raw vars were deleted rather than mapped.",
   },
   {
-    token: '--font-mono (JetBrains Mono)',
+    token: '--accent-fg (on-accent-subtle text)',
     reason:
-      'Stack is mapped, but the webfont is NOT bundled (the design loaded it from Google Fonts; no dependency was added). Mono text falls back to the system monospace.',
-  },
-  {
-    token: 'keyframes iws-overlay / iws-sheet-r / iws-drawer-b',
-    reason:
-      'Present in the design-system page but NOT in tokens/motion.css, so not carried over. (iws-spin/pop/shake/shimmer/in/pop-in are included.)',
-  },
-  {
-    token: '--ease-standard',
-    reason:
-      'Added as a named token; its value comes from a comment in motion.css, not a formal token declaration in the source.',
+      'Present in the States & Components page (#0369A1 light / #7DD3FC dark) but absent from tokens/colors.css. No accent-subtle-foreground token exists in the CSS layer — text on accent-bg has no dedicated color.',
   },
 ]
