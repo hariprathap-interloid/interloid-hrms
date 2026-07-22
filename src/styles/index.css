@@ -44,7 +44,8 @@
   --accent: #0ea5e9;
   --accent-foreground: #ffffff;
   --accent-bg: #e0f2fe;
-  --ring: rgba(79, 70, 229, 0.4);
+  --ring: #4f46e5;
+  --ring-subtle: rgba(79, 70, 229, 0.4);
 
   /* Semantic roles — solid / on-solid fg (bridge) / subtle tint / on-subtle fg */
   --success: #10b981;
@@ -127,7 +128,8 @@
   --accent: #38bdf8;
   --accent-foreground: #0b1120;
   --accent-bg: rgba(56, 189, 248, 0.15);
-  --ring: rgba(99, 102, 241, 0.5);
+  --ring: #6366f1;
+  --ring-subtle: rgba(99, 102, 241, 0.5);
 
   /* Dark solids are light → on-solid text is dark ink (#0b1120) */
   --success: #34d399;
@@ -195,6 +197,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-ring-subtle: var(--ring-subtle);
 
   /* Brand */
   --color-primary: var(--primary);
@@ -399,7 +402,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   html {
     @apply font-sans;
