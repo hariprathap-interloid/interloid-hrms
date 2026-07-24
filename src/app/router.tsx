@@ -7,6 +7,12 @@ import HomeLoadingSkeleton from '@/skeletons/home'
 
 export const router = createBrowserRouter([
   {
+    // Auth screen — standalone, outside the app shell (no sidebar / top bar).
+    path: paths.login.path,
+    errorElement: <ErrorPage />,
+    lazy: () => import('./pages/login').then((module) => ({ Component: module.default })),
+  },
+  {
     element: <MainLayout />,
     errorElement: <ErrorPage />,
     children: [

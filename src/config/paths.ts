@@ -3,6 +3,10 @@ export const paths = {
     path: '/',
     getHref: () => '/',
   },
+  login: {
+    path: '/login',
+    getHref: () => '/login',
+  },
   devTokens: {
     path: '/dev/tokens',
     getHref: () => '/dev/tokens',

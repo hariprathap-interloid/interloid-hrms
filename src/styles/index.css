@@ -98,6 +98,10 @@
   --mesh:
     radial-gradient(60% 120% at 12% 0%, rgba(79, 70, 229, 0.1) 0%, transparent 60%),
     radial-gradient(50% 120% at 92% 0%, rgba(14, 165, 233, 0.1) 0%, transparent 60%);
+  /* Login showcase — a fixed brand-illustration gradient (indigo→sky), the same
+     in both themes; the panel is a marketing surface, not a themeable UI role,
+     so its raw brand stops live here in the token layer, not in component markup. */
+  --login-hero: linear-gradient(150deg, #312e81 0%, #4338ca 44%, #0ea5e9 128%);
   /* Shimmer gradient — reconciled to the design source (States & Components
      v4.16): stops 25/37/63 (not 25/50/75), highlight = --border. Pairs with
      background-size:640px + the iws-shimmer keyframe below. Built on

@@ -19,6 +19,10 @@ const buttonVariants = cva(
         destructive:
           'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',
+        // Microsoft-branded SSO button: a fixed white surface with dark ink in
+        // BOTH themes (Microsoft sign-in button brand spec). No semantic token
+        // expresses a theme-invariant brand white, so this variant sets it.
+        sso: 'border-border bg-white text-neutral-800 shadow-sm hover:brightness-[0.98]',
       },
       size: {
         default:

@@ -489,3 +489,55 @@ filters to 3 rows with `total` flowing to the badge + footer; select-all → bul
 Export · Clear) with rows tinted; row ⋯ → View / Edit / Delete menu; controlled pagination `Page 1 of
 3`. (Note: CDP screenshots intermittently time out while a Radix Popover/DropdownMenu opens — a
 capture-timing quirk, no console errors; a short wait + retry recovers.)
+
+---
+
+## Login screen (design: `Login.dc.html`)
+
+Standalone auth screen — two panes: a marketing **showcase** and the **auth column** with a
+three-step flow (SSO → email → 6-digit MFA → done). Composed from existing `@/components/ui`
+primitives; no `ui/` file rewritten (one cva variant added, below).
+
+**Files — `src/features/auth/components/`:**
+
+- **`login-panel.tsx`** — the auth column + full step machine (ported from the design's DCLogic):
+  Microsoft SSO (simulated 1.5s → MFA), an expandable email/password form with inline validation
+  (Input + Label), the MFA step (OtpInput + verify + error/attempts + 3-strike lockout countdown +
+  resend cooldown), and the success step that redirects to `paths.home`. All buttons are shadcn
+  `Button`; spinners are `Loader2 + animate-spin`; the error alert reuses the `iws-shake` keyframe.
+- **`otp-input.tsx`** — 6-box numeric code, composed from shadcn `Input` (auto-advance,
+  backspace-to-prev, arrow nav, paste-to-fill). Error rides `aria-invalid` + a `destructive-subtle`
+  tint.
+- **`login-showcase.tsx`** — the fixed brand panel (hidden below `lg`): brand lockup, headline, three
+  proof rows (lucide icons), and a live "trust card" (`animate-ping` dot + avatar stack).
+- **Page** `src/app/pages/login.tsx` + **route** `paths.login` (`/login`), wired as a **top-level
+  route OUTSIDE `MainLayout`** so the auth screen has no sidebar/top bar. Verified: `/login` shows no
+  shell; the post-login redirect to `/` shows the full AppShell.
+
+**The one `ui/` change — Button `sso` cva variant.** The Microsoft sign-in button is a **fixed white
+surface with dark ink in BOTH themes** (Microsoft's sign-in-button brand spec — the colourful logo
+must sit on white). No semantic token expresses a theme-invariant brand white, so per the task's
+"add a cva variant and tell me why" I added `sso: 'border-border bg-white text-neutral-800 shadow-sm
+hover:brightness-[0.98]'`. This is the sanctioned carve-out (add a variant, don't rewrite base
+classes).
+
+**Token added — `--login-hero`.** The showcase gradient (`linear-gradient(150deg,#312E81,#4338CA,
+#0EA5E9)`) is a fixed brand-illustration surface (same both themes). Rather than hardcode raw hex in
+markup (CLAUDE.md forbids), the gradient lives in the token layer (`index.css`), and the panel's
+on-surface content uses `white`/`white-opacity` utilities. Minor deviation: the trust-card avatars
+use `chart-1/2/3` tokens instead of the design's indigo/sky/violet hexes (violet has no token).
+
+**Assets needed: none.** The design uses no photography, illustration, or logo files — it's pure CSS
+gradient + inline SVG. The Microsoft mark is inlined as SVG (standard 4-square brand glyph); the
+Interloid brand is a gradient tile with the "I" glyph (no logo file). Nothing to provide.
+
+**⚠ UI-only — not real auth.** Every step is a client-side stub with simulated timers (SSO, email
+submit, and MFA all advance on `setTimeout`; the demo MFA code is `123456` with a 3-strike lockout).
+**No credentials are sent anywhere.** Wiring to real Microsoft Entra ID / a backend (and gating the
+app routes behind auth) is the obvious next step. The marketing stats (231/248, 93.1%, avatars) are
+demo content from the design.
+
+**Verified (2026-07-24, browser, dark):** showcase (brand, headline, 3 proofs, ping trust card) +
+auth column (white MS button with logo, email expand w/ disabled-until-valid submit, footer);
+SSO → MFA (masked email, OTP boxes, resend countdown, mono demo hint); typed `123456` → verify →
+redirect to `/` landing on the dashboard **with** the app shell (login correctly rendered without it).
