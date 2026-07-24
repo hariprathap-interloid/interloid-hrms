@@ -39,4 +39,8 @@ export const paths = {
     path: '/dev/table',
     getHref: () => '/dev/table',
   },
+  devThrow: {
+    path: '/dev/throw',
+    getHref: () => '/dev/throw',
+  },
 } as const

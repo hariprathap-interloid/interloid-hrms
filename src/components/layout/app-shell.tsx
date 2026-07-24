@@ -1,22 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Blocks, Clock, LayoutDashboard, Layers, LogOut, Palette, Table2 } from 'lucide-react'
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { env } from '@/config/env'
+import { Blocks, LayoutDashboard, Layers, Palette, Table2 } from 'lucide-react'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { paths } from '@/config/paths'
 import { useAuth } from '@/features/auth/use-auth'
 import { AppSidebar, type NavGroup } from './app-sidebar'
+import { CommandPalette } from './command-palette'
+import { TopBar } from './top-bar'
 
 /* Design widths (components/Sidebar): labeled 248px, icon rail 68px. The
    primitive reads these from SidebarProvider. */
@@ -75,54 +66,53 @@ function FooterStatus() {
   )
 }
 
-/** Account menu — exposes the stubbed auth actions. `expire` lets the guard
-    route to /session-expired; `signOut` sends the guard to /login. */
-function AccountMenu() {
-  const { user, signOut, expire } = useAuth()
-  const initials =
-    user?.name
-      .split(' ')
-      .map((word) => word[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() ?? '?'
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Account menu">
-          <span className="from-primary to-accent text-primary-foreground flex size-7 items-center justify-center rounded-full bg-linear-to-br text-[11px] font-semibold">
-            {initials}
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {user && (
-          <DropdownMenuLabel className="font-normal">
-            <div className="text-foreground text-sm font-semibold">{user.name}</div>
-            <div className="text-muted-foreground truncate font-mono text-[11px]">{user.email}</div>
-          </DropdownMenuLabel>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={expire}>
-          <Clock />
-          Simulate session expiry
-        </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={signOut}>
-          <LogOut />
-          Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
+const initialsOf = (name: string) =>
+  name
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
+  const { user, signOut, expire } = useAuth()
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
   const activeKey = useMemo(
     () => resolveActiveKey(NAV_GROUPS, location.pathname),
     [location.pathname],
   )
+
+  // Page title/crumb for the TopBar, derived from the active nav item.
+  let title = 'Interloid'
+  let crumb: string | undefined
+  for (const group of NAV_GROUPS) {
+    const item = group.items.find((navItem) => navItem.key === activeKey)
+    if (item) {
+      title = item.label
+      crumb = group.label
+      break
+    }
+  }
+
+  // Global ⌘K / Ctrl-K toggles the command palette.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteOpen((open) => !open)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const topBarUser = {
+    name: user?.name ?? 'Interloid User',
+    role: 'HR Manager',
+    initials: initialsOf(user?.name ?? 'Interloid User'),
+  }
 
   return (
     <SidebarProvider style={SIDEBAR_SIZES}>
@@ -130,16 +120,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           no onNavigate handler is needed here — hrefs carry the destinations. */}
       <AppSidebar groups={NAV_GROUPS} activeKey={activeKey} footer={<FooterStatus />} />
       <SidebarInset>
-        <header className="border-border flex h-15 shrink-0 items-center gap-3 border-b px-4">
-          <SidebarTrigger />
-          <span className="text-foreground text-sm font-semibold">{env.VITE_APP_NAME}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
-            <AccountMenu />
-          </div>
-        </header>
+        <TopBar
+          title={title}
+          crumb={crumb}
+          onSearch={() => setPaletteOpen(true)}
+          notificationCount={3}
+          user={topBarUser}
+          onExpire={expire}
+          onSignOut={signOut}
+        />
         <main className="flex-1 overflow-auto">{children}</main>
       </SidebarInset>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </SidebarProvider>
   )
 }

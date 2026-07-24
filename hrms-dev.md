@@ -597,3 +597,31 @@ from the invite/reset token.
 `123456` → dashboard; account menu → **Simulate session expiry → `/session-expired`** (guard) with the
 persisted user; re-auth → back to `/`; Forgot / Reset / Account-Setup render; a bad URL → the full-page
 404 (no shell) showing the path. Server Error is wired as the `errorElement` (not live-triggered).
+
+---
+
+## TopBar + Command palette + error-page trigger (2026-07-24)
+
+**New dependency:** `cmdk` (^1.1.1) — for shadcn's `command` primitive (explicitly requested).
+
+- **`src/components/ui/command.tsx`** — the shadcn command primitive (new `ui/` file, not a variant
+  edit; authorized). One adaptation: selected/hover uses `bg-muted`, because this repo's `--accent`
+  is the sky brand color, not shadcn's default subtle accent.
+- **`src/components/layout/top-bar.tsx`** — `TopBar` (design `components/TopBar`): glass chrome,
+  sidebar toggle + page title/crumb, a ⌘K search box (icon button < md), notifications bell with a
+  count, and the user button. The **ad-hoc AccountMenu was folded into the user dropdown**
+  (Simulate session expiry / Sign out). Theme toggle kept in the bar (the design omits it, but the
+  app needs it somewhere — flagged).
+- **`src/components/layout/command-palette.tsx`** — the ⌘K quick switcher via shadcn `CommandDialog`,
+  fed Screens (nav) + Employees; selection navigates. (shadcn's dialog portals to `document.body`
+  rather than the app-shell frame the design mentions — a benign difference.)
+- **`app-shell.tsx`** — placeholder header replaced by `<TopBar>`; title/crumb derived from the active
+  nav item; a global ⌘K/Ctrl-K listener toggles the palette; `<CommandPalette>` mounted.
+- **`/dev/throw`** (`pages/dev-throw.tsx`, protected route) throws on render so the protected group's
+  `errorElement` (`ServerErrorPage`) can be **verified live**.
+- **`flow.md`** (repo root) — documents the (stubbed) authentication flow end to end, with a mermaid
+  state diagram.
+
+**Verified (2026-07-24, browser):** TopBar renders (title "Data table / Design System", ⌘K box, bell
+badge 3, "Priya Nair / HR Manager"); ⌘K opens the palette → typing "token" filters → Enter navigates
+to `/dev/tokens` and the title updates; `/dev/throw` → the live full-page ServerErrorPage.

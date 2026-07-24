@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
       { path: paths.devComponents.path, lazy: lazy(() => import('./pages/dev-components')) },
       { path: paths.devStates.path, lazy: lazy(() => import('./pages/dev-states')) },
       { path: paths.devTable.path, lazy: lazy(() => import('./pages/dev-table')) },
+      { path: paths.devThrow.path, lazy: lazy(() => import('./pages/dev-throw')) },
     ],
   },
 
