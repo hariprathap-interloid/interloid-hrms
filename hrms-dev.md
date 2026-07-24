@@ -157,9 +157,10 @@ appears in the inline no-permission panel).
   `background-size:640px 100%`, `animation: iws-shimmer 1.3s infinite linear`.
 - Variants shown: **table rows** (avatar + 2 bars 42%/24%), **KPI cards** (label 56% / value
   44% / sub 70%), **form** (label bar + 38px field, ×3, + 40×130 submit placeholder).
-- ⚠ This gradient (stops 25/37/63, 640px) differs from the `--skeleton` token in `index.css`
-  (stops 25/50/75) and from that token's `iws-shimmer` keyframe (200%/-200% vs 320px offsets).
-  Reconcile when building the Skeleton component — pick one.
+- ✅ **Reconciled (2026-07-24).** The `--skeleton` token was stops 25/50/75 and its `iws-shimmer`
+  keyframe was 200%/-200%; both were changed to the **design's** values (stops 25/37/63, keyframe
+  `-320px → 320px` to match `background-size:640px`). Design is source of truth. The token now reads
+  `var(--muted)/var(--border)` (one definition, adapts to dark). See "Data-view lifecycle" below.
 
 ### C. Overlay & feedback components
 
@@ -354,3 +355,46 @@ sidebar ≈ 7:1; `#6366f1` vs `#0e1626` dark sidebar ≈ 3.6:1, vs `#1b2536` sid
 indigo badge pill (floats to the corner in rail), and footer chip all render per the design card.
 Collapse toggles via the header trigger; rail labels become hover tooltips; nav updates the active
 item from the route. Not exercised: the `<md>` mobile Sheet (primitive default) and Cmd/Ctrl-B toggle.
+
+---
+
+## Data-view lifecycle + Skeletons — from `States & Components` (v4.16)
+
+Built the five-state lifecycle ("every table & list cycles these") and the shimmer skeleton family
+as reusable components in **`src/components/data-view/`** (barrel `index.ts`):
+
+- **`state-message.tsx`** — `StateMessage` shell (52px tinted icon tile · copy slot = title +
+  description + optional mono `code` · action slot) and three presets:
+  - `EmptyState` — `muted` tile, primary CTA in the action slot, description capped 280px.
+  - `ErrorState` — `destructive-subtle` tile + solid `destructive` glyph, always a mono `code`
+    line, outline retry in the action slot.
+  - `NoAccessState` — `warning-subtle` tile. **Has no `action` prop at all** — per the spec,
+    permission failures _hide_ actions rather than disabling them, so the component structurally
+    can't render one.
+- **`skeleton.tsx`** — `Shimmer` base (uses the reconciled `--skeleton` gradient +
+  `background-size:640px` + `iws-shimmer`) and the three design variants: `SkeletonRows`
+  (avatar + 2 bars, optional trailing status pill), `SkeletonKpis` (label/value/sub in a tile),
+  `SkeletonForm` (label + 38px field ×n + submit block). Placeholder lists key off a fixed
+  `PLACEHOLDER_KEYS` array, not the map index (satisfies `react-x/no-array-index-key`).
+- **`data-view.tsx`** — `DataView` (switches caller-provided `loading`/`empty`/`error`/`noAccess`
+  slots vs. populated `children` off a `status` prop), `DataViewList` (the bordered r-12 frame
+  shared by populated + loading), `DataViewRow` (avatar + name + mono code + trailing status;
+  **not hover-interactive**, per spec), and `StatusPill` (subtle-tinted chip + solid dot).
+
+All tints use the semantic `-subtle` / `-subtle-foreground` tokens (no raw colors). The stock
+`ui/skeleton` (animate-pulse) was left untouched — the shimmer family is separate.
+
+**Skeleton reconciliation (token, not just component):** the design's shimmer (stops **25/37/63**,
+`background-size:640px`) disagreed with the `--skeleton` token (25/50/75) and its `iws-shimmer`
+keyframe (`200%/-200%`). Per "page is source of truth," **the token was changed to match the page**:
+`--skeleton` → `linear-gradient(90deg, var(--muted) 25%, var(--border) 37%, var(--muted) 63%)`
+(one var-based definition, so the dark override was deleted — it adapts on its own), and the
+keyframe → `-320px → 320px` (a 640px sweep). Nothing else consumed the old keyframe.
+
+**Demo/verify:** wired `/dev/states` (route + `paths.devStates` + thin page +
+`features/dev-components/components/data-view-gallery.tsx`) and added a **States** item to the
+sidebar's Design System group. **Verified (2026-07-24, browser, both themes):** all five states via
+the segmented switcher — populated rows (avatars, mono codes, success pills), framed loading shimmer
+(rows + pill placeholder), empty (muted tile + primary CTA), error (destructive tile + `503 ·
+service_unavailable` + outline retry), no-access (warning tile, **no button**) — plus the three
+standalone skeletons, shimmer animating in light and dark.

@@ -98,7 +98,11 @@
   --mesh:
     radial-gradient(60% 120% at 12% 0%, rgba(79, 70, 229, 0.1) 0%, transparent 60%),
     radial-gradient(50% 120% at 92% 0%, rgba(14, 165, 233, 0.1) 0%, transparent 60%);
-  --skeleton: linear-gradient(90deg, #eef1f6 25%, #e2e8f0 50%, #eef1f6 75%);
+  /* Shimmer gradient — reconciled to the design source (States & Components
+     v4.16): stops 25/37/63 (not 25/50/75), highlight = --border. Pairs with
+     background-size:640px + the iws-shimmer keyframe below. Built on
+     var(--muted)/var(--border) so one definition adapts to dark. */
+  --skeleton: linear-gradient(90deg, var(--muted) 25%, var(--border) 37%, var(--muted) 63%);
 
   /* Radius base (scale exposed via @theme below) */
   --radius: 10px;
@@ -178,7 +182,8 @@
   --mesh:
     radial-gradient(60% 120% at 12% 0%, rgba(99, 102, 241, 0.2) 0%, transparent 60%),
     radial-gradient(50% 120% at 92% 0%, rgba(56, 189, 248, 0.16) 0%, transparent 60%);
-  --skeleton: linear-gradient(90deg, #1b2536 25%, #243047 50%, #1b2536 75%);
+  /* --skeleton not overridden here — it references --muted/--border, which
+     this block already re-forks, so the shimmer adapts to dark on its own. */
 }
 
 /* ----- Theme-varying tokens → Tailwind utility layer (inlined refs) ------- */
@@ -341,11 +346,13 @@
   }
 }
 @keyframes iws-shimmer {
+  /* Reconciled to the design: a 640px sweep matching --skeleton's
+     background-size:640px (was 200%/-200%). */
   0% {
-    background-position: 200% 0;
+    background-position: -320px 0;
   }
   100% {
-    background-position: -200% 0;
+    background-position: 320px 0;
   }
 }
 @keyframes iws-in {

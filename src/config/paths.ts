@@ -11,4 +11,8 @@ export const paths = {
     path: '/dev/components',
     getHref: () => '/dev/components',
   },
+  devStates: {
+    path: '/dev/states',
+    getHref: () => '/dev/states',
+  },
 } as const
