@@ -7,11 +7,20 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type OnChangeFn,
+  type PaginationState,
   type RowData,
+  type RowSelectionState,
   type SortingState,
 } from '@tanstack/react-table'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -32,17 +41,17 @@ import { cn } from '@/lib/utils'
 
 /* ---------------------------------------------------------------------------
  * DataTable — the workforce data grid (design source: project 8f1502f5,
- * components/DataTable). shadcn Table markup + TanStack for sorting +
- * pagination. Non-populated states (loading / empty / error / no-access) are
- * rendered through the shared DataView lifecycle components — NOT reimplemented.
+ * components/DataTable). shadcn Table markup + TanStack. One API covers every
+ * record-listing screen (Employees / Attendance / Leave & Permissions /
+ * Unified Approvals). For compact embedded lists use data-view's DataViewList.
  *
- * Rows are non-interactive by default (per the States spec: "rows are not
- * hover-interactive"). Passing `onRowClick` opts into the interactive variant
- * (hover, pointer, keyboard, navigation).
- *
- * Use this for record-listing screens (Employees / Attendance / Leave &
- * Permissions / Unified Approvals). For compact embedded lists (dashboard
- * widgets, in-card mini-lists) use data-view's DataViewList/DataViewRow instead.
+ * - Sorting + pagination are CLIENT-SIDE by default; pass `page`/`total`/
+ *   `onPageChange` (+ `sort`/`onSortChange`) to drive them server-side.
+ * - Row selection + a bulk-action bar, per-row ⋯ actions, and a `toolbar` slot
+ *   (FilterBar fills it) — all gated by `permitActions` for role limits.
+ * - Non-populated states render through the shared DataView lifecycle.
+ * - Rows are non-interactive by default (per the States spec); `onRowClick`
+ *   opts into the interactive variant (hover / pointer / keyboard nav).
  * ------------------------------------------------------------------------- */
 
 // Per-column layout hints, read off the TanStack column def's `meta`.
@@ -77,24 +86,63 @@ function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
   return <ChevronUp className={cn('size-3.5', !sorted && 'text-muted-foreground/70')} />
 }
 
+function keysToSelection(keys: string[]): RowSelectionState {
+  return Object.fromEntries(keys.map((key) => [key, true]))
+}
+function selectionToKeys(selection: RowSelectionState): string[] {
+  return Object.keys(selection).filter((key) => selection[key])
+}
+
+export interface BulkAction {
+  label: string
+  icon?: ReactNode
+  onClick?: (selectedKeys: string[]) => void
+}
+
 export interface DataTableProps<TData> {
   columns: ColumnDef<TData>[]
   data: TData[]
   /** Defaults to "populated" when data exists, else "empty". */
   status?: DataViewStatus
   density?: Density
-  /** Sort applied on first render (uncontrolled thereafter). */
+
+  /** Sort applied on first render (uncontrolled). */
   defaultSort?: SortingState
+  /** Controlled sort — pass with `onSortChange` (and typically server pagination). */
+  sort?: SortingState
+  onSortChange?: (sort: SortingState) => void
+
   pageSize?: number
-  /** Stable row identity; defaults to TanStack's index-based id. */
-  getRowId?: (row: TData) => string
+  /** Uncontrolled starting page (1-based). */
+  defaultPage?: number
+  /** Controlled/server page (1-based). Presence switches pagination to manual. */
+  page?: number
+  /** Total row count across pages — required for server-side page counts. */
+  total?: number
+  onPageChange?: (page: number) => void
+
+  /** Row selection + bulk-action bar. */
+  selectable?: boolean
+  selectedKeys?: string[]
+  defaultSelectedKeys?: string[]
+  onSelectionChange?: (keys: string[]) => void
+  bulkActions?: BulkAction[]
+
+  /** Per-row ⋯ menu — return DropdownMenu items for the row. */
+  rowActions?: (row: TData) => ReactNode
   /** Opt-in interactive rows — presence enables hover/pointer/keyboard nav. */
   onRowClick?: (row: TData) => void
+  /** Role-limited view: strip selection / bulk / row-actions but keep data. Default true. */
+  permitActions?: boolean
+
+  /** Stable row identity; defaults to TanStack's index-based id. */
+  getRowId?: (row: TData) => string
   title?: ReactNode
-  /** Right-aligned toolbar slot (search, filter, create…). */
+  /** Right-aligned toolbar slot (FilterBar, search, create…). */
   toolbar?: ReactNode
   /** Footer summary; defaults to the row count. */
   caption?: ReactNode
+
   /** Lifecycle slots — reuse EmptyState/ErrorState/NoAccessState. Sensible defaults if omitted. */
   loading?: ReactNode
   loadingRows?: number
@@ -109,9 +157,22 @@ export function DataTable<TData>({
   status,
   density = 'default',
   defaultSort = [],
+  sort,
+  onSortChange,
   pageSize = 25,
-  getRowId,
+  defaultPage = 1,
+  page,
+  total,
+  onPageChange,
+  selectable = false,
+  selectedKeys,
+  defaultSelectedKeys = [],
+  onSelectionChange,
+  bulkActions = [],
+  rowActions,
   onRowClick,
+  permitActions = true,
+  getRowId,
   title,
   toolbar,
   caption,
@@ -121,7 +182,41 @@ export function DataTable<TData>({
   error,
   noAccess,
 }: DataTableProps<TData>) {
-  const [sorting, setSorting] = useState<SortingState>(defaultSort)
+  const isServer = page !== undefined
+
+  // --- sorting (controlled ⇄ uncontrolled) ---
+  const [innerSorting, setInnerSorting] = useState<SortingState>(defaultSort)
+  const sorting = sort ?? innerSorting
+  const onSortingChange: OnChangeFn<SortingState> = (updater) => {
+    const next = typeof updater === 'function' ? updater(sorting) : updater
+    if (sort === undefined) setInnerSorting(next)
+    onSortChange?.(next)
+  }
+
+  // --- selection (controlled ⇄ uncontrolled) ---
+  const [innerSelection, setInnerSelection] = useState<RowSelectionState>(() =>
+    keysToSelection(defaultSelectedKeys),
+  )
+  const rowSelection = selectedKeys ? keysToSelection(selectedKeys) : innerSelection
+  const onRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) => {
+    const next = typeof updater === 'function' ? updater(rowSelection) : updater
+    if (selectedKeys === undefined) setInnerSelection(next)
+    onSelectionChange?.(selectionToKeys(next))
+  }
+
+  // --- pagination (controlled ⇄ uncontrolled) ---
+  const [innerPageIndex, setInnerPageIndex] = useState(defaultPage - 1)
+  const pageIndex = isServer ? page - 1 : innerPageIndex
+  const pagination: PaginationState = { pageIndex, pageSize }
+  const onPaginationChange: OnChangeFn<PaginationState> = (updater) => {
+    const next = typeof updater === 'function' ? updater(pagination) : updater
+    if (isServer) onPageChange?.(next.pageIndex + 1)
+    else setInnerPageIndex(next.pageIndex)
+  }
+
+  const totalRows = total ?? data.length
+  const showChecks = selectable && permitActions
+  const showRowActions = permitActions && Boolean(rowActions)
 
   // TanStack manages its own instance memoization; React Compiler correctly
   // skips it. Silence the incompatible-library notice — it's expected here.
@@ -129,17 +224,24 @@ export function DataTable<TData>({
   const table = useReactTable({
     data,
     columns,
-    state: { sorting },
-    onSortingChange: setSorting,
+    state: { sorting, rowSelection, pagination },
+    onSortingChange,
+    onRowSelectionChange,
+    onPaginationChange,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize } },
+    getSortedRowModel: isServer ? undefined : getSortedRowModel(),
+    getPaginationRowModel: isServer ? undefined : getPaginationRowModel(),
+    manualSorting: isServer,
+    manualPagination: isServer,
+    pageCount: isServer ? Math.max(1, Math.ceil(totalRows / pageSize)) : undefined,
+    enableRowSelection: showChecks,
     getRowId,
   })
 
   const resolved: DataViewStatus = status ?? (data.length ? 'populated' : 'empty')
   const interactive = Boolean(onRowClick)
+  const selectedCount = selectionToKeys(rowSelection).length
+  const pageCount = table.getPageCount()
 
   const handleRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: TData) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -148,17 +250,44 @@ export function DataTable<TData>({
     }
   }
 
-  const pageCount = table.getPageCount()
-  const pageIndex = table.getState().pagination.pageIndex
-  const rowCount = table.getRowCount()
-
   return (
     <section className="border-border bg-card overflow-hidden rounded-lg border shadow-sm">
       {(title || toolbar) && (
-        <div className="border-border flex flex-wrap items-center gap-2.5 border-b px-[17px] py-[15px]">
-          {title && <div className="text-foreground text-sm font-semibold">{title}</div>}
-          <div className="flex-1" />
+        <div className="border-border flex flex-wrap items-center gap-2.5 border-b px-[17px] py-[13px]">
+          {title && (
+            <>
+              <div className="text-foreground text-sm font-semibold">{title}</div>
+              <div className="flex-1" />
+            </>
+          )}
           {toolbar}
+        </div>
+      )}
+
+      {/* bulk-action bar */}
+      {showChecks && selectedCount > 0 && (
+        <div className="border-border bg-primary-bg flex flex-wrap items-center gap-3 border-b px-4 py-2.5">
+          <span className="text-primary text-[13px] font-semibold">{selectedCount} selected</span>
+          {bulkActions.length > 0 && <span className="bg-border h-4 w-px" />}
+          {bulkActions.map((action) => (
+            <Button
+              key={action.label}
+              variant="outline"
+              size="sm"
+              onClick={() => action.onClick?.(selectionToKeys(rowSelection))}
+            >
+              {action.icon}
+              {action.label}
+            </Button>
+          ))}
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={() => table.setRowSelection({})}
+            className="text-primary text-[12.5px] font-medium"
+          >
+            Clear
+          </button>
         </div>
       )}
 
@@ -168,6 +297,21 @@ export function DataTable<TData>({
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-border bg-muted hover:bg-muted">
+                  {showChecks && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          table.getIsAllPageRowsSelected()
+                            ? true
+                            : table.getIsSomePageRowsSelected()
+                              ? 'indeterminate'
+                              : false
+                        }
+                        onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
+                        aria-label="Select all rows on this page"
+                      />
+                    </TableHead>
+                  )}
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta ?? {}
                     const sortable = header.column.getCanSort()
@@ -200,42 +344,77 @@ export function DataTable<TData>({
                       </TableHead>
                     )
                   })}
+                  {showRowActions && <TableHead className="w-11" aria-label="Row actions" />}
                 </TableRow>
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={cn(
-                    DENSITY_ROW[density],
-                    interactive ? 'hover:bg-muted/50 cursor-pointer' : 'hover:bg-transparent', // non-interactive default (per spec)
-                  )}
-                  onClick={interactive ? () => onRowClick?.(row.original) : undefined}
-                  role={interactive ? 'button' : undefined}
-                  tabIndex={interactive ? 0 : undefined}
-                  onKeyDown={interactive ? (event) => handleRowKey(event, row.original) : undefined}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta ?? {}
-                    return (
-                      <TableCell
-                        key={cell.id}
-                        style={{ width: meta.width, minWidth: meta.minWidth }}
-                        className={cn('text-[13.5px]', alignClass(meta.align), meta.cellClassName)}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              {table.getRowModel().rows.map((row) => {
+                const selected = row.getIsSelected()
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      DENSITY_ROW[density],
+                      selected && 'bg-primary-bg hover:bg-primary-bg',
+                      !selected &&
+                        (interactive ? 'hover:bg-muted/50 cursor-pointer' : 'hover:bg-transparent'),
+                    )}
+                    onClick={interactive ? () => onRowClick?.(row.original) : undefined}
+                    role={interactive ? 'button' : undefined}
+                    tabIndex={interactive ? 0 : undefined}
+                    onKeyDown={
+                      interactive ? (event) => handleRowKey(event, row.original) : undefined
+                    }
+                  >
+                    {showChecks && (
+                      <TableCell className="w-10" onClick={(event) => event.stopPropagation()}>
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(value) => row.toggleSelected(value === true)}
+                          aria-label="Select row"
+                        />
                       </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))}
+                    )}
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta ?? {}
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          style={{ width: meta.width, minWidth: meta.minWidth }}
+                          className={cn(
+                            'text-[13.5px]',
+                            alignClass(meta.align),
+                            meta.cellClassName,
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      )
+                    })}
+                    {showRowActions && (
+                      <TableCell className="w-11" onClick={(event) => event.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm" aria-label="Row actions">
+                              <MoreVertical />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {rowActions?.(row.original)}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
 
           <div className="flex flex-wrap items-center gap-3 px-4 py-[11px]">
             <span className="text-muted-foreground text-[12.5px]">
-              {caption ?? `${rowCount} ${rowCount === 1 ? 'row' : 'rows'}`}
+              {caption ?? `${totalRows} ${totalRows === 1 ? 'row' : 'rows'}`}
             </span>
             <div className="flex-1" />
             {pageCount > 1 && (

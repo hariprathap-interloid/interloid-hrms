@@ -441,17 +441,51 @@ those components rather than reimplementing them** (the design's own `DataTable.
 `<a>` is invalid HTML, so navigation is JS-driven, not an anchor — cells can render `<Link>` if real
 anchor semantics are needed on a column.)
 
-**Not built this pass (design has them; deferred, flagged):** row **selection + bulk-action bar**,
-per-row **⋯ actions**, **server-side/controlled pagination** (`total`/`page`/`onPageChange` — current
-build is client-side via TanStack), and the **mobile table→stacked-card** transform (below 640px the
-table currently just scrolls horizontally). The lint shows one tolerated warning — TanStack's
-`useReactTable` trips `react-hooks/incompatible-library` (React Compiler skips memoizing it; TanStack
-manages its own) — suppressed with an explained inline disable.
+**Still deferred:** the **mobile table→stacked-card** transform (below 640px the table just scrolls
+horizontally). One tolerated lint warning — TanStack's `useReactTable` trips
+`react-hooks/incompatible-library` (React Compiler skips memoizing it; TanStack manages its own) —
+suppressed with an explained inline disable.
 
 **Demo/verify:** wired `/dev/table` (route + `paths.devTable` + thin page +
 `features/dev-components/components/data-table-gallery.tsx`) and added a **Data table** sidebar item.
-**Verified (2026-07-24, browser, dark):** populated grid (sortable headers, PersonCell avatars, mono
-IDs, tone-correct status chips, right-aligned dates, `14 rows` / `Page 1 of 3` pagination); header-
-click re-sort (Department asc); interactive opt-in (toggle → row click fires navigation + hover);
-and loading (`SkeletonRows`) / empty (custom `EmptyState` + Clear-filters) / no-access
-(`NoAccessState`, no button) all routing through DataView. Error uses the identical DataView path.
+**Verified (2026-07-24, browser):** populated grid (sortable headers, PersonCell avatars, mono IDs,
+tone-correct status chips, right-aligned dates, `14 rows` / `Page 1 of 3` pagination); header-click
+re-sort; interactive opt-in (toggle → row click fires navigation + hover); and loading (`SkeletonRows`)
+/ empty (custom `EmptyState` + Clear-filters) / no-access (`NoAccessState`, no button) all routing
+through DataView. Error uses the identical DataView path.
+
+### DataTable API completion + FilterBar + PageHeader (2026-07-24)
+
+Rounded out the DataTable to the full design contract and built the two toolbar/title companions.
+
+- **Controlled / server-side pagination + sorting** — passing `page` switches to manual mode:
+  `manualPagination` + `manualSorting`, `pageCount` from `total`, and `page`/`onPageChange` +
+  `sort`/`onSortChange` drive the footer and headers. **Client-side stays the default when `page` is
+  omitted** (internal TanStack sorted + paginated row models). Both branches share one render.
+- **Row selection + bulk-action bar** — `selectable` (+ `selectedKeys`/`onSelectionChange`/
+  `bulkActions`), backed by TanStack `rowSelection` bridged to the design's string-key array API. A
+  leading shadcn `Checkbox` column (header = select-all with indeterminate), selected rows tint
+  `bg-primary-bg`, and a bar above the table: "N selected" · bulk buttons · Clear.
+- **Per-row ⋯ actions** — `rowActions?: (row) => ReactNode` returns DropdownMenu items; DataTable
+  renders the trailing ⋯ trigger + shadcn `DropdownMenu`. (This is the shadcn-integrated take on the
+  design's `(row)=>void` "you own the surface" contract — noted as a deliberate ergonomic choice.)
+- **`permitActions`** (default true) gates selection + bulk + row-actions for role-limited views —
+  data stays visible, affordances the role lacks are stripped.
+- **`toolbar` slot** — right-aligned in the title row; when `title` is omitted it left-aligns as a
+  full strip (how FilterBar sits). Non-interactive row default is unchanged.
+
+**FilterBar** — `src/components/data-table/filter-bar.tsx` (exported from the barrel). Faceted strip
+for the toolbar slot: label + facet dropdowns (single/multi, shadcn `Popover` + option list w/ check)
+
+- auto-derived removable chips (`--primary-bg` tint) + Clear all. Chips derive from `values` unless
+  overridden. **PageHeader** — `src/components/layout/page-header.tsx`. Screen title block: optional
+  breadcrumb + icon tile, title + status badges (6-tone, `-subtle` tokens) + description,
+  primary/secondary actions (shadcn Button), and an in-page tab row (underline + count pills).
+
+**Verified (2026-07-24, browser):** the `/dev/table` gallery now renders a full workforce screen —
+PageHeader (title, "14 total" badge that tracks the filtered count, Export/Add actions, tabs) above a
+DataTable whose toolbar is a FilterBar. Confirmed: Department facet → "Department: Design" chip →
+filters to 3 rows with `total` flowing to the badge + footer; select-all → bulk bar ("3 selected" ·
+Export · Clear) with rows tinted; row ⋯ → View / Edit / Delete menu; controlled pagination `Page 1 of
+3`. (Note: CDP screenshots intermittently time out while a Radix Popover/DropdownMenu opens — a
+capture-timing quirk, no console errors; a short wait + retry recovers.)

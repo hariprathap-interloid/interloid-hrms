@@ -1,14 +1,20 @@
 import { useMemo, useState } from 'react'
+import { Download, Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { PageHeader } from '@/components/layout/page-header'
 import {
   DataTable,
+  FilterBar,
   MonoText,
   PersonCell,
   TableBadge,
   type BadgeTone,
   type ColumnDef,
+  type Facet,
+  type SortingState,
 } from '@/components/data-table'
 import { EmptyState, type DataViewStatus } from '@/components/data-view'
 
@@ -45,7 +51,6 @@ const NAMES = [
   'Sara Khan',
 ]
 
-// Bounds-safe cyclic pick (repo enables noUncheckedIndexedAccess).
 function cycle<T>(arr: readonly T[], i: number): T {
   return arr[i % arr.length] as T
 }
@@ -67,6 +72,11 @@ function formatJoined(iso: string) {
   })
 }
 
+const FACETS: Facet[] = [
+  { key: 'dept', label: 'Department', options: DEPTS, multi: true },
+  { key: 'status', label: 'Status', options: STATUSES.map((s) => s.label), multi: true },
+]
+
 const STATE_TABS: { key: DataViewStatus; label: string }[] = [
   { key: 'populated', label: 'Data' },
   { key: 'loading', label: 'Loading' },
@@ -75,10 +85,63 @@ const STATE_TABS: { key: DataViewStatus; label: string }[] = [
   { key: 'no-access', label: 'No access' },
 ]
 
+type Filters = Record<string, string | string[]>
+
+function matchesFilters(emp: Employee, filters: Filters) {
+  const dept = filters.dept
+  if (Array.isArray(dept) && dept.length > 0 && !dept.includes(emp.dept)) return false
+  const status = filters.status
+  if (Array.isArray(status) && status.length > 0 && !status.includes(emp.status.label)) return false
+  return true
+}
+
+function sortValue(emp: Employee, id: string) {
+  if (id === 'person') return emp.name
+  if (id === 'dept') return emp.dept
+  if (id === 'joined') return emp.joined
+  return emp.id
+}
+
+function sortRows(rows: Employee[], sorting: SortingState) {
+  const first = sorting[0]
+  if (!first) return rows
+  return [...rows].sort((a, b) => {
+    const av = sortValue(a, first.id)
+    const bv = sortValue(b, first.id)
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0
+    return first.desc ? -cmp : cmp
+  })
+}
+
+const PAGE_SIZE = 6
+
 export function DataTableGallery() {
   const [status, setStatus] = useState<DataViewStatus>('populated')
   const [interactive, setInteractive] = useState(false)
-  const [lastClicked, setLastClicked] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Filters>({})
+  const [sort, setSort] = useState<SortingState>([{ id: 'person', desc: false }])
+  const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<string[]>([])
+  const [message, setMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('all')
+
+  // Server-style pipeline: filter → sort → paginate (the caller owns all three).
+  const filtered = useMemo(() => EMPLOYEES.filter((e) => matchesFilters(e, filters)), [filters])
+  const sorted = useMemo(() => sortRows(filtered, sort), [filtered, sort])
+  const total = sorted.length
+  const pageSlice = useMemo(
+    () => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [sorted, page],
+  )
+
+  const changeFilter = (key: string, value: string | string[]) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setPage(1)
+  }
+  const clearFilters = () => {
+    setFilters({})
+    setPage(1)
+  }
 
   const columns = useMemo<ColumnDef<Employee>[]>(
     () => [
@@ -116,8 +179,31 @@ export function DataTableGallery() {
     [],
   )
 
+  const effectiveStatus: DataViewStatus = status === 'populated' && total === 0 ? 'empty' : status
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Employees"
+        description="Everyone in the Interloid workforce directory."
+        badges={[{ label: `${total} total`, tone: 'neutral' }]}
+        secondaryActions={[
+          { label: 'Export', icon: <Download />, onClick: () => setMessage('Exported directory') },
+        ]}
+        primaryAction={{
+          label: 'Add employee',
+          icon: <Plus />,
+          onClick: () => setMessage('Opening add-employee form'),
+        }}
+        tabs={[
+          { key: 'all', label: 'All', count: EMPLOYEES.length },
+          { key: 'active', label: 'Active' },
+          { key: 'leave', label: 'On leave' },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+
       {/* State switcher + interactive toggle */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="bg-muted inline-flex gap-0.5 rounded-[9px] p-[3px]">
@@ -147,39 +233,84 @@ export function DataTableGallery() {
             Interactive rows (opt-in)
           </Label>
         </div>
-        {interactive && lastClicked && (
-          <span className="text-small text-muted-foreground">
-            Row navigated → <span className="text-foreground font-medium">{lastClicked}</span>
-          </span>
-        )}
+        {message && <span className="text-small text-muted-foreground">{message}</span>}
       </div>
 
       <DataTable
         columns={columns}
-        data={EMPLOYEES}
-        status={status}
-        pageSize={6}
-        defaultSort={[{ id: 'person', desc: false }]}
+        data={pageSlice}
+        status={effectiveStatus}
+        // controlled/server-side pagination + sorting
+        page={page}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+        sort={sort}
+        onSortChange={setSort}
         getRowId={(row) => row.id}
-        title="Employees"
-        onRowClick={interactive ? (row) => setLastClicked(row.name) : undefined}
+        // selection + bulk
+        selectable
+        selectedKeys={selected}
+        onSelectionChange={setSelected}
+        bulkActions={[
+          {
+            label: 'Export',
+            icon: <Download />,
+            onClick: (keys) => setMessage(`Exported ${keys.length} selected`),
+          },
+        ]}
+        // per-row ⋯ actions
+        rowActions={(row) => (
+          <>
+            <DropdownMenuItem onClick={() => setMessage(`View ${row.name}`)}>
+              <Eye />
+              View profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setMessage(`Edit ${row.name}`)}>
+              <Pencil />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setMessage(`Delete ${row.name}`)}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </>
+        )}
+        onRowClick={interactive ? (row) => setMessage(`Navigated → ${row.name}`) : undefined}
+        // FilterBar fills the toolbar slot
+        toolbar={
+          <FilterBar
+            facets={FACETS}
+            values={filters}
+            onChange={changeFilter}
+            onClearAll={clearFilters}
+          />
+        }
         empty={
           <EmptyState
             title="No employees match your filters"
             description="Try broadening or clearing the active filters."
-            action={<Button variant="outline">Clear filters</Button>}
+            action={
+              <Button variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            }
           />
         }
       />
 
       <p className="text-small text-muted-foreground">
-        Rows are non-interactive by default (per the States spec). Toggle{' '}
-        <strong className="text-foreground font-medium">Interactive rows</strong> to opt into the
-        hover / pointer / keyboard navigation variant. Sorting is on{' '}
-        <strong className="text-foreground font-medium">Employee</strong>,{' '}
-        <strong className="text-foreground font-medium">Department</strong>, and{' '}
-        <strong className="text-foreground font-medium">Joined</strong>; the non-populated states
-        render through the shared DataView lifecycle.
+        This grid drives{' '}
+        <strong className="text-foreground font-medium">sorting + pagination server-side</strong>{' '}
+        (filter → sort → paginate in the caller; client-side is the default when{' '}
+        <code className="text-mono">page</code> is omitted). Selection shows a bulk bar, each row
+        has a <strong className="text-foreground font-medium">⋯ menu</strong>, and{' '}
+        <strong className="text-foreground font-medium">FilterBar</strong> fills the toolbar slot.
+        Rows stay non-interactive unless you opt in.
       </p>
     </div>
   )
