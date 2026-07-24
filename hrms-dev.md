@@ -273,3 +273,84 @@ gap; both non-shadcn focusables (plain `<a>`, custom `tabIndex` div) show the gl
 outline. Nothing weak in either theme. Note: reading the ring via `getComputedStyle` on a
 CDP/automation-driven focus is unreliable (`:focus-visible` drops during eval, reporting a zero
 box-shadow) — the rendered pixels are the source of truth, not the computed style.
+
+---
+
+## App Sidebar — composed against `components/Sidebar` (project `8f1502f5`)
+
+The design source is a folder, not a single `.dc.html`: `Sidebar.jsx` (reference impl),
+`Sidebar.d.ts` (props contract), `Sidebar.card.html` (visual card), `Sidebar.prompt.md` (usage).
+Built on **shadcn's `sidebar` primitive** — collapse, mobile Sheet, and keyboard nav are the
+primitive's job, not hand-rolled (per the task).
+
+### Files (all new; nothing in `src/components/ui/` touched)
+
+- `src/components/layout/app-sidebar.tsx` — `AppSidebar`, props mirror the design contract
+  (`groups` / `activeKey` / `onNavigate` / `brand` / `footer`; role-filtering is the caller's job).
+  Presentational only — feeds the primitive the design's structure and paints the treatment on top.
+- `src/components/layout/app-shell.tsx` — `AppShell`: `SidebarProvider` (sets the design widths) +
+  `AppSidebar` (with the app's real nav registry) + `SidebarInset` (a slim top header holding the
+  `SidebarTrigger`, app name, and theme toggle). Active key derived from the route (longest-prefix).
+- `src/app/layouts/main-layout.tsx` — rewired: the old bare header is replaced by `<AppShell>`
+  wrapping the `Suspense`/`Outlet`. The sidebar is now the app shell for every route.
+
+### Design treatment reproduced via composition (className only)
+
+Brand: 60px bar, 30px gradient mark (`bg-linear-to-br from-primary to-accent`, white "I"), title
+14/600 + muted 11px subtitle (subtitle + title drop in rail). Grouped nav with 10.5px uppercase
+labels (auto-hidden in rail by the primitive). Items: 18px icons @ stroke 1.8, 13.5px/500 label,
+r-9. **Active** = `sidebar-accent` tint + **primary** label + a 3px primary left rail bar. Count
+**badge** = filled indigo pill (`bg-primary` / `primary-foreground`). Footer slot renders a
+"Phase 1a · Live" status chip. Widths **248 / 68** via `--sidebar-width` / `--sidebar-width-icon`.
+
+### What the design specifies that the primitive can't express as-is
+
+Everything below was still achievable by composition, but the primitive's defaults actively
+disagree — recorded so a later reader knows these are deliberate overrides, not drift.
+
+1. **Active left rail bar** — the primitive's active state is only a bg tint + `sidebar-accent-fg`
+   text; there is **no left indicator**. Added as a sibling `<span>` inside the menu item, _not_ a
+   `::before` on the button: `SidebarMenuButton` carries `overflow-hidden`, which would clip the
+   design's `left:-12px` bar. Consequence: the bar sits at the item's left edge (`left-0`), not the
+   design's −12px gutter. Visually equivalent; exact offset differs by design.
+2. **Active label colour** — primitive paints active text `sidebar-accent-foreground`; design wants
+   `--primary`. Overridden with `data-active:text-primary`.
+3. **Count badge** — the biggest disagreement. `SidebarMenuBadge` is a plain `sidebar-foreground`
+   text label **and is hidden in icon/rail mode** (`group-data-[collapsible=icon]:hidden`). Design
+   wants a filled indigo pill that **floats into the rail corner** when collapsed. Had to restyle it
+   _and_ un-hide + reposition it for rail (`group-data-[collapsible=icon]:flex … top-1 right-2`).
+4. **Rail centering** — the primitive's collapsed menu button is a fixed 32px (`size-8!`), content
+   left-aligned, and relies on `overflow-hidden` to clip the label off the right edge. Design centers
+   a full-width item. Forcing `w-full!`/`justify-center` re-revealed the truncated label ("D", "T."),
+   so the label span also needs an explicit `group-data-[collapsible=icon]:hidden`. The primitive's
+   collapsed sizing is `!important`, so the overrides must be `!important` too.
+5. **Exact pixel metrics** — design is pixel-precise (13.5px text, 9px radius, 18px icon, 60px brand,
+   30px mark, 19px badge); the primitive's defaults are token-rounded (14px, rounded-md, 16px, h-8).
+   Matched the salient ones via arbitrary values. Item height lands at 36px (`h-9`) vs the design's
+   ~38px — within a couple px, left as-is.
+6. **Mobile transform — genuine gap.** The design says the mobile bottom-tab-bar is "owned by the
+   app shell, not this component," and Sidebar renders tablet-up. The shadcn primitive instead
+   auto-swaps to a **hamburger + slide-in Sheet** below `md`. So mobile currently gets the primitive's
+   Sheet, **not** the design's bottom tab bar — that bar is unbuilt and needs a separate app-shell
+   responsive branch. Flagged, out of scope for this pass.
+7. **Nav semantics** — the design reference models items as `<button onClick>` + `onNavigate`. This
+   build **upgrades to real anchors**: `SidebarMenuButton asChild` wrapping a react-router `<Link
+to={href}>`, so items render as `<a href>` with middle-click / open-in-new-tab / right-click and
+   proper a11y. `onNavigate` was dropped from `AppSidebar`'s props — hrefs on the items carry the
+   destinations, and the `<Link>` navigates declaratively (no imperative `useNavigate` in the shell).
+
+### `--sidebar-ring` — closed (AC-1 completion, 2026-07-24)
+
+The primitive's sidebar controls use `focus-visible:ring-2 ring-sidebar-ring` — full token opacity,
+**no `/50` dilution** (unlike the 8 core controls AC-1 fixed). So the entire weakness was the _token_:
+`--sidebar-ring` was translucent (`rgba(79,70,229,.4)` light / `rgba(99,102,241,.5)` dark), landing
+~1.9:1. Fix is **token-only** — no `ui/sidebar.tsx` edit, no offset needed: `--sidebar-ring` is now
+opaque and theme-forked, matching `--ring` (`#4f46e5` light / `#6366f1` dark). Opaque indigo on the
+sidebar surface clears WCAG 2.2 SC 1.4.11 (3:1) in both themes. Contrast checks: `#4f46e5` vs white
+sidebar ≈ 7:1; `#6366f1` vs `#0e1626` dark sidebar ≈ 3.6:1, vs `#1b2536` sidebar-accent ≈ 3.1:1.
+
+**Verified (2026-07-24, browser `/dev/components` + `/dev/tokens`):** labeled (248px) and icon rail
+(68px), both light and dark. Brand mark, grouped labels, active tint + primary label + left rail bar,
+indigo badge pill (floats to the corner in rail), and footer chip all render per the design card.
+Collapse toggles via the header trigger; rail labels become hover tooltips; nav updates the active
+item from the route. Not exercised: the `<md>` mobile Sheet (primitive default) and Cmd/Ctrl-B toggle.

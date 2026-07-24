@@ -80,7 +80,11 @@
   --sidebar-accent: #eef1f6;
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: rgba(79, 70, 229, 0.4);
+  /* Opaque, full-opacity focus ring — matches --ring (AC-1). The primitive's
+     sidebar controls use `focus-visible:ring-2 ring-sidebar-ring` (no /50
+     dilution), so making the token opaque is the whole fix: indigo on the
+     sidebar surface clears WCAG 2.2 SC 1.4.11 (3:1) without an offset. */
+  --sidebar-ring: #4f46e5;
 
   /* Elevation (theme-varying) */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
@@ -162,7 +166,7 @@
   --sidebar-accent: #1b2536;
   --sidebar-accent-foreground: #e6eaf2;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: rgba(99, 102, 241, 0.5);
+  --sidebar-ring: #6366f1; /* opaque focus ring, matches --ring dark (AC-1) */
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
