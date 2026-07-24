@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { paths } from '@/config/paths'
 import { cn } from '@/lib/utils'
+import { useAuth } from '../use-auth'
+import { AuthBrandMark } from './auth-shell'
 import { OtpInput } from './otp-input'
 
 type Step = 'signin' | 'mfa' | 'done'
@@ -28,6 +30,7 @@ function MicrosoftLogo() {
 
 export function LoginPanel() {
   const navigate = useNavigate()
+  const { signIn } = useAuth()
 
   const [step, setStep] = useState<Step>('signin')
   const [ssoLoading, setSsoLoading] = useState(false)
@@ -102,6 +105,7 @@ export function LoginPanel() {
     setMfaState('loading')
     timer.current = setTimeout(() => {
       if (fullCode === DEMO_CODE) {
+        signIn({ name: 'Priya Nair', email: email || 'priya.nair@interloid.io' })
         setStep('done')
         timer.current = setTimeout(() => void navigate(paths.home.getHref()), 1100)
         return
@@ -145,13 +149,8 @@ export function LoginPanel() {
   const lockClock = `${Math.floor(lockIn / 60)}:${String(lockIn % 60).padStart(2, '0')}`
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 relative w-full max-w-[392px] duration-500">
-      {/* compact brand mark */}
-      <div className="mb-[22px] flex items-center justify-center">
-        <div className="from-primary to-accent text-primary-foreground flex size-[38px] items-center justify-center rounded-[11px] bg-linear-to-br text-[18px] font-bold shadow-lg">
-          I
-        </div>
-      </div>
+    <div>
+      <AuthBrandMark className="mb-[22px]" />
 
       <div className="mb-[22px]">
         <div className="text-foreground text-[22px] font-semibold tracking-[-0.02em]">{title}</div>

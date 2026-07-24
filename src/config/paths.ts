@@ -7,6 +7,22 @@ export const paths = {
     path: '/login',
     getHref: () => '/login',
   },
+  accountSetup: {
+    path: '/account-setup',
+    getHref: () => '/account-setup',
+  },
+  forgotPassword: {
+    path: '/forgot-password',
+    getHref: () => '/forgot-password',
+  },
+  resetPassword: {
+    path: '/reset-password',
+    getHref: () => '/reset-password',
+  },
+  sessionExpired: {
+    path: '/session-expired',
+    getHref: () => '/session-expired',
+  },
   devTokens: {
     path: '/dev/tokens',
     getHref: () => '/dev/tokens',

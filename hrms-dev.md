@@ -541,3 +541,59 @@ demo content from the design.
 auth column (white MS button with logo, email expand w/ disabled-until-valid submit, footer);
 SSO → MFA (masked email, OTP boxes, resend countdown, mono demo hint); typed `123456` → verify →
 redirect to `/` landing on the dashboard **with** the app shell (login correctly rendered without it).
+
+---
+
+## Auth boundary + remaining auth screens (2026-07-24)
+
+Added a **stubbed client-side auth boundary** and the five remaining auth/error screens. No backend —
+sessions are simulated and persisted to `sessionStorage`.
+
+**Boundary:**
+
+- `src/features/auth/use-auth.ts` — `AuthContext` + `useAuth` (hook only, no component, mirrors the
+  repo's `use-theme.ts`/`theme-provider.tsx` split so fast-refresh stays happy).
+- `src/features/auth/auth-provider.tsx` — `AuthProvider`: `status` (`authenticated` |
+  `unauthenticated` | `expired`) + `user`, with `signIn` / `signOut` / `expire`. Backed by
+  `sessionStorage` (survives refresh). Wired into `AppProviders`.
+- `src/app/layouts/protected-layout.tsx` — the route guard: `expired` → `<Navigate>` to
+  `/session-expired`, anything non-authenticated → `/login`, else renders `<MainLayout>`.
+- **Router restructured**: public auth routes (login / account-setup / forgot-password /
+  reset-password / session-expired) sit **outside** the guard; the app routes nest under
+  `ProtectedLayout` with `ServerErrorPage` as `errorElement`; a full-page 404 catch-all.
+- **Login** now calls `signIn()` on MFA success; the **AppShell** gained an account menu
+  (avatar → "Simulate session expiry" / "Sign out") so the guard's `expired`/`unauthenticated`
+  redirects are reachable in-app — **Session Expired is reached via the guard, not just by URL.**
+
+**Screens** (all reuse shared chrome in `features/auth/components/auth-shell.tsx` —
+`AuthTwoPane` / `AuthCentered` / `AuthShowcase` / `ShowcaseTrust` / `AuthBrandMark`; Login refactored
+onto them):
+
+- **Forgot Password** (`/forgot-password`) — two-pane; email → "check your inbox" with resend timer.
+- **Reset Password** (`/reset-password`) — two-pane; strength meter + 4-rule checklist + confirm +
+  show/hide eye → done; `?expired=1` shows the expired-link variant. Password helpers live in
+  `password-utils.ts` (+ `password-fields.tsx` components), shared with Account Setup.
+- **Account Setup** (`/account-setup`) — centered glass card; invited-user chip + create/confirm +
+  terms → activated.
+- **Session Expired** (`/session-expired`) — centered glass card; re-auth with the persisted user
+  (`expired` variant, the guard target) → `signIn` → back to the app; `?variant=locked` shows the
+  lockout countdown.
+- **Not Found** (`*`) — full-page, no shell; gradient 404 + the actual bad path + back/dashboard.
+- **Server Error** (route `errorElement`) — full-page; retry demo (1st fails, 2nd recovers) + Ref +
+  copy.
+
+**Reused primitives only** — Input / Button / Label / Checkbox / DropdownMenu / ThemeToggle. No new
+`ui/` change beyond the `sso` Button variant added for Login (Microsoft brand white). Password fields
+use `h-11 border-[1.5px]` + `aria-invalid:bg-destructive-subtle` (composition; Input already ships the
+`aria-invalid` border/ring). One shared token added earlier (`--login-hero`) covers the showcase.
+
+**⚠ Still UI-only — no real auth.** Every step is simulated (`setTimeout`); the MFA demo code is
+`123456`, Session-Expired/Account-Setup accept any password ≥ the rule threshold, and no credentials
+leave the browser. The guard reads only the stubbed `sessionStorage` session. Invite details
+(Diya Sharma / ITL-0187) and the reset account email are hardcoded demo data — a real flow reads them
+from the invite/reset token.
+
+**Verified (2026-07-24, browser, dark):** `/` (unauthenticated) → redirect to `/login`; SSO → MFA
+`123456` → dashboard; account menu → **Simulate session expiry → `/session-expired`** (guard) with the
+persisted user; re-auth → back to `/`; Forgot / Reset / Account-Setup render; a bad URL → the full-page
+404 (no shell) showing the path. Server Error is wired as the `errorElement` (not live-triggered).

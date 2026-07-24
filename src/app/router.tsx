@@ -1,44 +1,38 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { paths } from '@/config/paths'
-import { MainLayout } from './layouts/main-layout'
-import ErrorPage from './pages/error'
+import { ProtectedLayout } from './layouts/protected-layout'
 import NotFoundPage from './pages/not-found'
+import ServerErrorPage from './pages/server-error'
 import HomeLoadingSkeleton from '@/skeletons/home'
 
+const lazy = (loader: () => Promise<{ default: React.ComponentType }>) => () =>
+  loader().then((module) => ({ Component: module.default }))
+
 export const router = createBrowserRouter([
+  // ----- Public auth routes (no shell, no guard) -----
+  { path: paths.login.path, lazy: lazy(() => import('./pages/login')) },
+  { path: paths.accountSetup.path, lazy: lazy(() => import('./pages/account-setup')) },
+  { path: paths.forgotPassword.path, lazy: lazy(() => import('./pages/forgot-password')) },
+  { path: paths.resetPassword.path, lazy: lazy(() => import('./pages/reset-password')) },
+  { path: paths.sessionExpired.path, lazy: lazy(() => import('./pages/session-expired')) },
+
+  // ----- Protected app (guard + shell) -----
   {
-    // Auth screen — standalone, outside the app shell (no sidebar / top bar).
-    path: paths.login.path,
-    errorElement: <ErrorPage />,
-    lazy: () => import('./pages/login').then((module) => ({ Component: module.default })),
-  },
-  {
-    element: <MainLayout />,
-    errorElement: <ErrorPage />,
+    element: <ProtectedLayout />,
+    errorElement: <ServerErrorPage />,
     children: [
       {
         path: paths.home.path,
-        lazy: () => import('./pages/home').then((module) => ({ Component: module.default })),
+        lazy: lazy(() => import('./pages/home')),
         HydrateFallback: HomeLoadingSkeleton,
       },
-      {
-        path: paths.devTokens.path,
-        lazy: () => import('./pages/dev-tokens').then((module) => ({ Component: module.default })),
-      },
-      {
-        path: paths.devComponents.path,
-        lazy: () =>
-          import('./pages/dev-components').then((module) => ({ Component: module.default })),
-      },
-      {
-        path: paths.devStates.path,
-        lazy: () => import('./pages/dev-states').then((module) => ({ Component: module.default })),
-      },
-      {
-        path: paths.devTable.path,
-        lazy: () => import('./pages/dev-table').then((module) => ({ Component: module.default })),
-      },
-      { path: '*', Component: NotFoundPage },
+      { path: paths.devTokens.path, lazy: lazy(() => import('./pages/dev-tokens')) },
+      { path: paths.devComponents.path, lazy: lazy(() => import('./pages/dev-components')) },
+      { path: paths.devStates.path, lazy: lazy(() => import('./pages/dev-states')) },
+      { path: paths.devTable.path, lazy: lazy(() => import('./pages/dev-table')) },
     ],
   },
+
+  // ----- Full-page 404 fallback -----
+  { path: '*', Component: NotFoundPage },
 ])
