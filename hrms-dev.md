@@ -398,3 +398,60 @@ the segmented switcher — populated rows (avatars, mono codes, success pills), 
 (rows + pill placeholder), empty (muted tile + primary CTA), error (destructive tile + `503 ·
 service_unavailable` + outline retry), no-access (warning tile, **no button**) — plus the three
 standalone skeletons, shimmer animating in light and dark.
+
+---
+
+## DataTable — the workforce data grid (design `components/DataTable`)
+
+**New dependency:** `@tanstack/react-table` (^8.21.3) — explicitly authorized for this build.
+
+**Screen split (confirmed from the design, so the two never overlap):**
+
+- **DataTable** — the grid for **every screen that lists records**: Employees, Attendance, Leave &
+  Permissions, Unified Approvals (+ the Data Table showcase). The prompt is explicit: _"One API
+  covers all of them; do not fork a bespoke table per screen."_ Owns headers, sorting, pagination,
+  (selection/bulk + row actions in the full design), and the responsive transform.
+- **DataViewList / DataViewRow** (built earlier) — the lightweight avatar+name+code+status list for
+  **compact embedded contexts** (dashboard "recent" widgets, in-card mini-lists, side panels). No
+  header, no pagination, not a grid.
+
+Both share the **DataView lifecycle** — so DataTable **renders its non-populated states through
+those components rather than reimplementing them** (the design's own `DataTable.jsx` has a bespoke
+`StatePanel`/`SkelRow`; we deliberately do not copy that).
+
+**Files — `src/components/data-table/`:**
+
+- **`data-table.tsx`** — `DataTable<TData>`: shadcn `Table` markup + TanStack (`getSortedRowModel`
+  - `getPaginationRowModel`). Header cells are sortable buttons (chevron via `getIsSorted`); rows
+    honor a `density` (compact/default/spacious → 42/54/64px); the card is `rounded-lg` (=14px token)
+  - `shadow-sm`. Column layout hints (`align`/`width`/`minWidth`/class overrides) ride on TanStack's
+    `ColumnMeta` via module augmentation. When `status !== "populated"` it renders `<DataView>` with
+    `SkeletonRows` (loading) / `EmptyState` / `ErrorState` / `NoAccessState` (sensible defaults,
+    overridable per-instance). `no-access` is the design's "forbidden" guard.
+- **`cells.tsx`** — `PersonCell` (avatar + name + sub), `MonoText`, `TableBadge` (the table's
+  rounded-rect **r7 chip**, 6 tones on `-subtle` tokens — distinct from data-view's full-pill
+  `StatusPill`; the design uses different badge shapes per context).
+- **`utils.ts`** — `avatarColor` / `initialsOf` (split out of `cells.tsx` so that file only exports
+  components, satisfying `react-refresh/only-export-components`).
+
+**Interactive rows — opt-in, non-interactive default (per spec):** rows are static by default
+(overriding shadcn `TableRow`'s baked-in `hover:bg-muted/50` with `hover:bg-transparent`, honoring
+"rows are not hover-interactive"). Passing **`onRowClick`** opts into the interactive variant:
+`cursor-pointer` + hover tint + `role="button"` + `tabIndex=0` + Enter/Space → navigate. (A whole-row
+`<a>` is invalid HTML, so navigation is JS-driven, not an anchor — cells can render `<Link>` if real
+anchor semantics are needed on a column.)
+
+**Not built this pass (design has them; deferred, flagged):** row **selection + bulk-action bar**,
+per-row **⋯ actions**, **server-side/controlled pagination** (`total`/`page`/`onPageChange` — current
+build is client-side via TanStack), and the **mobile table→stacked-card** transform (below 640px the
+table currently just scrolls horizontally). The lint shows one tolerated warning — TanStack's
+`useReactTable` trips `react-hooks/incompatible-library` (React Compiler skips memoizing it; TanStack
+manages its own) — suppressed with an explained inline disable.
+
+**Demo/verify:** wired `/dev/table` (route + `paths.devTable` + thin page +
+`features/dev-components/components/data-table-gallery.tsx`) and added a **Data table** sidebar item.
+**Verified (2026-07-24, browser, dark):** populated grid (sortable headers, PersonCell avatars, mono
+IDs, tone-correct status chips, right-aligned dates, `14 rows` / `Page 1 of 3` pagination); header-
+click re-sort (Department asc); interactive opt-in (toggle → row click fires navigation + hover);
+and loading (`SkeletonRows`) / empty (custom `EmptyState` + Clear-filters) / no-access
+(`NoAccessState`, no button) all routing through DataView. Error uses the identical DataView path.

@@ -28,6 +28,10 @@ export const router = createBrowserRouter([
         path: paths.devStates.path,
         lazy: () => import('./pages/dev-states').then((module) => ({ Component: module.default })),
       },
+      {
+        path: paths.devTable.path,
+        lazy: () => import('./pages/dev-table').then((module) => ({ Component: module.default })),
+      },
       { path: '*', Component: NotFoundPage },
     ],
   },

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Blocks, LayoutDashboard, Layers, Palette } from 'lucide-react'
+import { Blocks, LayoutDashboard, Layers, Palette, Table2 } from 'lucide-react'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { env } from '@/config/env'
@@ -35,6 +35,7 @@ const NAV_GROUPS: NavGroup[] = [
         badge: 6, // demo count — swap for a live value when one exists
       },
       { key: 'dev-states', label: 'States', icon: Layers, href: paths.devStates.getHref() },
+      { key: 'dev-table', label: 'Data table', icon: Table2, href: paths.devTable.getHref() },
     ],
   },
 ]
