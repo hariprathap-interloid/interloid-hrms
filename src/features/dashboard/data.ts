@@ -17,8 +17,9 @@ import type { AreaTrendPoint, CategoryBar, DonutSegment } from '@/components/cha
  * Company Dashboard data (design: Company Dashboard.dc.html, project 8f1502f5).
  * The design is role-aware — Employee / Team Lead / HR-Admin each see different
  * KPIs, charts and queues. `getDashboardData(role)` is the branching seam: the
- * HR/Admin branch is fully populated; Employee/Lead return null (screen shows a
- * "coming soon" note) and are a data fill-in, not a screen refactor.
+ * HR/Admin branch is fully populated here. Employee/Lead are handled upstream by
+ * EmployeeDashboard (dashboard-screen routes them there before this runs), so the
+ * null arms below are a defensive fallback, not a live "coming soon".
  * ------------------------------------------------------------------------- */
 
 export type DashboardRole = 'employee' | 'lead' | 'hr'

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/page-header'
 import { DonutChart } from '@/components/charts'
@@ -38,8 +38,8 @@ import {
  * My Leave (design: My Leave.dc.html) at /me/leave — all roles. Balance rings
  * (DonutChart) + a request form + history (DataViewList). The available balance
  * per type is the persona's (resolveUser → user.leaveBalance); ⚠ the ledger and
- * request history are demo (see ./data). Cancel is a direct action + toast (the
- * design's confirm AlertDialog is simplified — no ui/alert-dialog primitive).
+ * request history are demo (see ./data). Cancel routes through the shared Confirm
+ * dialog (ui/alert-dialog via ConfirmProvider), per the States spec.
  * ------------------------------------------------------------------------- */
 
 const STATUS_CHIP: Record<LeaveStatus, string> = {
@@ -79,7 +79,21 @@ export function MyLeaveScreen() {
     })
   }
 
-  const addRequest = (request: LeaveRequest) => setHistory((prev) => [request, ...prev])
+  // Monotonic request-id sequence, seeded past the highest demo id so new
+  // requests never collide (two same-duration requests used to map to one id).
+  const idSeq = useRef(
+    DEMO_HISTORY.reduce((max, request) => {
+      const n = Number(request.id.replace(/\D/g, ''))
+      return Number.isFinite(n) ? Math.max(max, n) : max
+    }, 2050),
+  )
+
+  const addRequest = (payload: Omit<LeaveRequest, 'id'>) => {
+    idSeq.current += 1
+    const id = `LR-${idSeq.current}`
+    setHistory((prev) => [{ id, ...payload }, ...prev])
+    toast.success(`${id} submitted · ${payload.days} ${payload.days === 1 ? 'day' : 'days'}`)
+  }
 
   const viewStatus: DataViewStatus =
     status === 'loading' ? 'loading' : history.length > 0 ? 'populated' : 'empty'
@@ -216,7 +230,7 @@ function RequestForm({
   onSubmit,
 }: {
   balances: LeaveBalance[]
-  onSubmit: (request: LeaveRequest) => void
+  onSubmit: (request: Omit<LeaveRequest, 'id'>) => void
 }) {
   const [type, setType] = useState('')
   const [start, setStart] = useState('')
@@ -248,15 +262,12 @@ function RequestForm({
       return
     }
     setError('')
-    const id = `LR-${2042 + Math.floor(days)}`
     onSubmit({
-      id,
       type,
       dates: end && end !== start ? `${short(start)}–${short(end)}` : short(start),
       days,
       status: 'pending',
     })
-    toast.success(`${id} submitted · ${days} ${days === 1 ? 'day' : 'days'}`)
     setType('')
     setStart('')
     setEnd('')

@@ -1,41 +1,24 @@
+import type { DemoUser } from '@/features/auth/demo-users'
+
 /* ---------------------------------------------------------------------------
  * My Profile data (design: My Profile.dc.html, project 8f1502f5).
  *
- * ⚠ FLAG — the persona carries only name / email / id / title / department. Every
- * field below (personal, contact, employment meta beyond dept/title, documents,
- * and the design's per-field HR-approval edit workflow) is DEMO. A real GET
- * /employees/{id} + /documents + profile_change_requests replaces it.
+ * The persona (DemoUser) carries only name / email / id / title / department, so
+ * buildProfile() DERIVES the rest per-persona: identity-bearing fields (personal
+ * email, emergency contact) from the persona's own name, the remainder as
+ * deterministic demo keyed off the persona id. Each account therefore sees its
+ * OWN self-consistent record — never another identity's contact/emergency data.
+ * A real GET /employees/{id} + /documents replaces buildProfile().
+ *
+ * ⚠ Note: the design's per-field "submit edit for HR approval" workflow is NOT
+ * blocked on data — the design runs it on local component state. It is simply not
+ * built yet (audit Tier 1). Do not mislabel it as data-deferred.
  * ------------------------------------------------------------------------- */
 
 export interface Field {
   label: string
   value: string
 }
-
-export const PERSONAL_FIELDS: Field[] = [
-  { label: 'Date of birth', value: '14 Mar 1996' },
-  { label: 'Gender', value: 'Male' },
-  { label: 'Marital status', value: 'Single' },
-  { label: 'Blood group', value: 'O+' },
-  { label: 'Nationality', value: 'Indian' },
-]
-
-export const CONTACT_FIELDS: Field[] = [
-  { label: 'Personal email', value: 'aarav.mehta@gmail.com' },
-  { label: 'Mobile', value: '+91 98765 43210' },
-  { label: 'Address', value: '42 MG Road, Indiranagar' },
-  { label: 'City / PIN', value: 'Bengaluru 560038' },
-  { label: 'Emergency contact', value: 'Sunita Mehta' },
-  { label: 'Emergency phone', value: '+91 98765 11111' },
-]
-
-// Employment meta shown in the header — dept/title come from the persona; the
-// rest is demo.
-export const EMPLOYMENT_META: Field[] = [
-  { label: 'Manager', value: 'Diya Sharma' },
-  { label: 'Employment', value: 'Full-time' },
-  { label: 'Joined', value: '12 Mar 2024' },
-]
 
 export interface EmployeeDoc {
   id: string
@@ -45,8 +28,96 @@ export interface EmployeeDoc {
   ext: string
 }
 
-export const DOCUMENTS: EmployeeDoc[] = [
-  { id: 'd1', name: 'Offer letter.pdf', size: '248 KB', date: '12 Mar 2024', ext: 'PDF' },
-  { id: 'd2', name: 'Aadhaar card.pdf', size: '1.2 MB', date: '12 Mar 2024', ext: 'PDF' },
-  { id: 'd3', name: 'PAN card.pdf', size: '180 KB', date: '12 Mar 2024', ext: 'PDF' },
+export interface ProfileData {
+  personal: Field[]
+  contact: Field[]
+  employment: Field[]
+  documents: EmployeeDoc[]
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const ADDRESSES = [
+  { address: '42 MG Road, Indiranagar', city: 'Bengaluru 560038' },
+  { address: '12 Turner Road, Bandra West', city: 'Mumbai 400050' },
+  { address: '8 Park Street', city: 'Kolkata 700016' },
+  { address: '221 Sector 44', city: 'Gurugram 122003' },
 ]
+const RELATIVES = ['Meera', 'Anil', 'Kavya', 'Ravi', 'Nisha', 'Vikram']
+
+// Deterministic per-persona seed (FNV-1a over the employee id).
+function seed(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i += 1) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function pick<T>(list: T[], s: number): T {
+  return list[s % list.length]!
+}
+
+function fmtDate(day: number, monthIdx: number, year: number): string {
+  return `${String(day).padStart(2, '0')} ${MONTHS[monthIdx]} ${year}`
+}
+
+// Manager routes up the org, never to self: employee→lead, lead/hr→admin, admin→board.
+function managerFor(user: DemoUser): string {
+  switch (user.role) {
+    case 'admin':
+      return 'Board of Directors'
+    case 'hr':
+    case 'lead':
+      return 'Devi Krishnan'
+    default:
+      return 'Rohan Gupta'
+  }
+}
+
+/**
+ * Build the signed-in persona's profile. Identity-bearing fields are derived from
+ * the persona so an account never shows another person's data; fields the persona
+ * doesn't carry are deterministic demo keyed off its id. Gender/marital are not
+ * carried and are NOT inferred from the name — gender shows "Not specified".
+ */
+export function buildProfile(user: DemoUser): ProfileData {
+  const s = seed(user.id)
+  const parts = user.name.trim().split(/\s+/)
+  const first = parts[0] ?? user.name
+  const last = parts.length > 1 ? parts[parts.length - 1]! : first
+  const handle = `${first}.${last}`.toLowerCase().replace(/[^a-z.]/g, '')
+
+  const joined = fmtDate(1 + ((s >>> 4) % 28), (s >>> 2) % 12, 2019 + (s % 6))
+  const place = pick(ADDRESSES, s)
+  const mobile = `+91 ${60000 + (s % 40000)} ${10000 + ((s >>> 3) % 90000)}`
+  const emergencyPhone = `+91 ${60000 + ((s >>> 7) % 40000)} ${10000 + ((s >>> 11) % 90000)}`
+
+  const personal: Field[] = [
+    { label: 'Date of birth', value: fmtDate(1 + (s % 28), s % 12, 1988 + (s % 11)) },
+    { label: 'Gender', value: 'Not specified' },
+    { label: 'Marital status', value: pick(['Single', 'Married'], s) },
+    { label: 'Blood group', value: pick(['O+', 'B+', 'A+', 'AB+', 'O−'], s) },
+    { label: 'Nationality', value: 'Indian' },
+  ]
+  const contact: Field[] = [
+    { label: 'Personal email', value: `${handle}@gmail.com` },
+    { label: 'Mobile', value: mobile },
+    { label: 'Address', value: place.address },
+    { label: 'City / PIN', value: place.city },
+    { label: 'Emergency contact', value: `${pick(RELATIVES, s)} ${last}` },
+    { label: 'Emergency phone', value: emergencyPhone },
+  ]
+  const employment: Field[] = [
+    { label: 'Manager', value: managerFor(user) },
+    { label: 'Employment', value: 'Full-time' },
+    { label: 'Joined', value: joined },
+  ]
+  const documents: EmployeeDoc[] = [
+    { id: 'd1', name: 'Offer letter.pdf', size: '248 KB', date: joined, ext: 'PDF' },
+    { id: 'd2', name: 'Aadhaar card.pdf', size: '1.2 MB', date: joined, ext: 'PDF' },
+    { id: 'd3', name: 'PAN card.pdf', size: '180 KB', date: joined, ext: 'PDF' },
+  ]
+
+  return { personal, contact, employment, documents }
+}

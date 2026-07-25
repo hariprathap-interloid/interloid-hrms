@@ -29,9 +29,9 @@ import {
 
 /* ---------------------------------------------------------------------------
  * Company Dashboard (design: Company Dashboard.dc.html) — the authenticated
- * landing at /dashboard. Role-aware: `useDashboardRole` picks the branch,
- * `getDashboardData` supplies its content (HR/Admin complete today). Chrome
- * (sidebar, top bar, ⌘K) is the AppShell's job; this screen is content only.
+ * landing at /dashboard. Role-aware: `useDashboardRole` maps admin→hr; employee
+ * and lead render EmployeeDashboard, hr/admin the org view via `getDashboardData`.
+ * Chrome (sidebar, top bar, ⌘K) is the AppShell's job; this screen is content only.
  * ------------------------------------------------------------------------- */
 
 // Role seam — reads the shared app role (src/features/auth/use-role). Admin sees

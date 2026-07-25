@@ -1122,3 +1122,42 @@ month). `tsc -b` + `eslint src/features/my-attendance/` both pass.
   variant consumed by `dashboard/employee-data.ts` + `employee-dashboard.tsx`), so the audit should decide
   the seam rather than patching one screen. Touches: `features/dashboard/employee-data.ts`,
   `features/dashboard/employee-dashboard.tsx` (AttendanceSnapshotCard), `features/my-attendance/data.ts`.
+
+---
+
+## Correctness fixes + comment-drift sweep (2026-07-25)
+
+Audit follow-up — correctness bugs only (no Tier-1 fidelity work).
+
+**0.4 My Profile identity bug.** Personal/Contact/Employment/Documents were frozen module constants
+(Aarav Mehta / Sunita Mehta / Diya Sharma) shown to every persona, so Priya/Arjun saw another person's
+contact + emergency data. Replaced with `buildProfile(user)` (`my-profile/data.ts`) — identity-bearing
+fields (personal email, emergency contact) derived from the persona's own name; the rest deterministic
+demo keyed off the employee id (FNV-1a seed). Gender is **not** inferred from the name → "Not specified".
+Manager routes up the org (employee→lead, lead/hr→admin, admin→board), never self. Bug found & fixed
+during verification: signed `>>` shifts on a >2³¹ seed produced negative phone groups (`+91 65397 -75238`)
+— switched to unsigned `>>>`. Verified: Priya → priya.nair@gmail.com / Vikram Nair; Arjun → arjun.rao@gmail.com
+/ Meera Rao / Kolkata; no persona shows Aarav/Sunita.
+
+**0.7 LR-#### collision.** `LR-${2042 + Math.floor(days)}` made every same-duration request collide
+(two 3-day requests both → LR-2045). Moved id assignment to the parent via a monotonic `useRef` counter
+seeded past the highest demo id; `RequestForm.onSubmit` now takes `Omit<LeaveRequest,'id'>`. Verified:
+two 3-day requests → LR-2051, LR-2052.
+
+**1.6 + comment sweep.** Corrected comments that had drifted from the code (reported below; none deleted
+outright — false rationales rewritten, accurate ⚠ data-blocked FLAGs left intact):
+
+- `my-leave-screen.tsx:42` — false "Cancel is a direct action + toast … no ui/alert-dialog primitive."
+  Reality: routes through ConfirmProvider → ui/alert-dialog. Rewritten.
+- `my-profile-screen.tsx` header + `my-profile/data.ts` FLAG — mislabeled the edit workflow as needing a
+  `profile_change_requests` backend. Reality: design runs it on local state; buildable now (Tier 1), not
+  data-blocked. Rewritten to say so (fields remain genuinely demo).
+- `my-profile-screen.tsx` Edit toast — dropped "workflow deferred" wording.
+- `dashboard/data.ts` + `dashboard-screen.tsx` headers — "coming soon"/"HR-Admin complete today" was stale
+  (employee branch is built; lead is routed to it). Rewritten; the null arms are a defensive fallback.
+- Left intact (accurate data-blocked flags): `my-leave/data.ts`, `notifications/data.ts`+screen,
+  `my-attendance/data.ts`, `auth-provider.tsx`, `punctuality-heatmap.tsx` deferral note.
+- Noted, not changed (dead code, not a comment): `RoleComingSoon` in `dashboard-screen.tsx` is now
+  unreachable for every role — flagged for a later cleanup pass.
+
+`tsc -b` + `eslint` on the touched features pass.

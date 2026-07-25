@@ -6,22 +6,16 @@ import { DataViewList } from '@/components/data-view'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/use-auth'
 import { cn } from '@/lib/utils'
-import {
-  CONTACT_FIELDS,
-  DOCUMENTS,
-  EMPLOYMENT_META,
-  PERSONAL_FIELDS,
-  type EmployeeDoc,
-  type Field,
-} from './data'
+import { buildProfile, type EmployeeDoc, type Field } from './data'
 
 /* ---------------------------------------------------------------------------
  * My Profile (design: My Profile.dc.html) at /me/profile — all roles. Identity
  * header (PageHeader: avatar + name + code/status badges + tabs) + a dept/manager
- * meta strip, then Personal / Contact / Documents tabs. Identity comes from the
- * persona (resolveUser); ⚠ everything else is demo (see ./data). Editing is the
- * design's HR-approval workflow — stubbed to a toast here (persona carries no
- * pending-change ledger).
+ * meta strip, then Personal / Contact / Documents tabs. The whole record is the
+ * signed-in persona's (buildProfile(user) derives it — see ./data). Editing (the
+ * design's submit-for-HR-approval workflow) is stubbed to a toast for now: it's
+ * local-state UI, buildable without new data, just not wired yet (audit Tier 1) —
+ * NOT blocked on a pending-change ledger.
  * ------------------------------------------------------------------------- */
 
 const initialsOf = (name: string) =>
@@ -44,6 +38,8 @@ export function MyProfileScreen() {
 
   if (!user) return null
 
+  const profile = buildProfile(user)
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6 lg:p-10">
       <PageHeader
@@ -59,7 +55,7 @@ export function MyProfileScreen() {
             label: 'Edit',
             icon: <Pencil />,
             onClick: () =>
-              toast('Profile edits route to HR for approval — workflow deferred (see notes).'),
+              toast('Profile edits route to HR for approval — that workflow isn’t wired up yet.'),
           },
         ]}
         tabs={TABS}
@@ -70,21 +66,21 @@ export function MyProfileScreen() {
       {/* Employment meta strip (dept/title from persona; rest demo) */}
       <div className="border-border bg-card grid grid-cols-2 gap-4 rounded-[14px] border p-5 shadow-sm sm:grid-cols-4">
         <Meta label="Department" value={user.department} />
-        {EMPLOYMENT_META.map((field) => (
+        {profile.employment.map((field) => (
           <Meta key={field.label} label={field.label} value={field.value} />
         ))}
       </div>
 
-      {tab === 'personal' && <FieldCard title="Personal details" fields={PERSONAL_FIELDS} />}
+      {tab === 'personal' && <FieldCard title="Personal details" fields={profile.personal} />}
 
       {tab === 'contact' && (
         <>
-          <FieldCard title="Contact details" fields={CONTACT_FIELDS} />
+          <FieldCard title="Contact details" fields={profile.contact} />
           <BankCard />
         </>
       )}
 
-      {tab === 'documents' && <DocumentsCard docs={DOCUMENTS} />}
+      {tab === 'documents' && <DocumentsCard docs={profile.documents} />}
     </div>
   )
 }
