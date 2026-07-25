@@ -7,6 +7,13 @@ import { Label } from '@/components/ui/label'
 import { paths } from '@/config/paths'
 import { cn } from '@/lib/utils'
 import { useAuth } from '../use-auth'
+import {
+  DEFAULT_DEMO_USER,
+  DEMO_ACCOUNTS,
+  DEMO_PASSWORD,
+  resolveUser,
+  type DemoUser,
+} from '../demo-users'
 import { AuthBrandMark } from './auth-shell'
 import { OtpInput } from './otp-input'
 
@@ -39,6 +46,8 @@ export function LoginPanel() {
   const [password, setPassword] = useState('')
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({})
   const [emailLoading, setEmailLoading] = useState(false)
+  const [pendingUser, setPendingUser] = useState<DemoUser | null>(null)
+  const [credError, setCredError] = useState('')
   const [code, setCode] = useState<string[]>(emptyCode)
   const [mfaState, setMfaState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [attempts, setAttempts] = useState(0)
@@ -86,6 +95,7 @@ export function LoginPanel() {
 
   const startSso = () => {
     if (ssoLoading) return
+    setPendingUser(DEFAULT_DEMO_USER) // SSO signs in as the default demo persona
     setSsoLoading(true)
     timer.current = setTimeout(goToMfa, 1500)
   }
@@ -96,6 +106,15 @@ export function LoginPanel() {
       setTouched({ email: true, password: true })
       return
     }
+    // Resolve the persona through the seam (demo-users → resolveUser) and check
+    // the shared demo password. A real API call replaces exactly this block.
+    const resolved = resolveUser(email)
+    if (!resolved || password !== DEMO_PASSWORD) {
+      setCredError('Those credentials don’t match a demo account.')
+      return
+    }
+    setCredError('')
+    setPendingUser(resolved)
     setEmailLoading(true)
     timer.current = setTimeout(goToMfa, 1000)
   }
@@ -105,7 +124,7 @@ export function LoginPanel() {
     setMfaState('loading')
     timer.current = setTimeout(() => {
       if (fullCode === DEMO_CODE) {
-        signIn({ name: 'Priya Nair', email: email || 'priya.nair@interloid.io' })
+        signIn(pendingUser ?? DEFAULT_DEMO_USER)
         setStep('done')
         timer.current = setTimeout(() => void navigate(paths.dashboard.getHref()), 1100)
         return
@@ -200,7 +219,10 @@ export function LoginPanel() {
                   autoComplete="username"
                   placeholder="you@interloid.io"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setEmail(event.target.value)
+                    if (credError) setCredError('')
+                  }}
                   onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                   aria-invalid={(touched.email && Boolean(emailError)) || undefined}
                   className="aria-invalid:bg-destructive-subtle h-11 rounded-[11px] border-[1.5px] px-3.5 text-sm"
@@ -226,7 +248,10 @@ export function LoginPanel() {
                   autoComplete="current-password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value)
+                    if (credError) setCredError('')
+                  }}
                   onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                   aria-invalid={(touched.password && Boolean(passwordError)) || undefined}
                   className="aria-invalid:bg-destructive-subtle h-11 rounded-[11px] border-[1.5px] px-3.5 text-sm"
@@ -246,8 +271,35 @@ export function LoginPanel() {
                 {emailLoading && <Loader2 className="animate-spin" />}
                 {emailLoading ? 'Signing in…' : 'Sign in'}
               </Button>
+              {credError && (
+                <div className="iws-shake border-destructive bg-destructive-subtle mt-3 flex items-center gap-2.5 rounded-[10px] border px-3.5 py-2.5">
+                  <AlertCircle className="text-destructive size-4 shrink-0" />
+                  <p className="text-destructive-subtle-foreground text-[12.5px]">{credError}</p>
+                </div>
+              )}
             </div>
           )}
+
+          <div className="border-border bg-muted/40 mt-5 rounded-[10px] border px-3.5 py-3">
+            <div className="text-muted-foreground mb-2 text-[10.5px] font-semibold tracking-[0.05em] uppercase">
+              Demo accounts
+            </div>
+            <div className="flex flex-col gap-1">
+              {DEMO_ACCOUNTS.map((account) => (
+                <div
+                  key={account.email}
+                  className="flex items-center justify-between gap-3 text-[12px]"
+                >
+                  <span className="text-foreground font-mono">{account.email}</span>
+                  <span className="text-muted-foreground">{account.title}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-muted-foreground mt-2.5 text-[11.5px]">
+              Password <span className="text-foreground font-mono">{DEMO_PASSWORD}</span> · MFA code{' '}
+              <span className="text-foreground font-mono">123456</span>
+            </div>
+          </div>
         </div>
       )}
 

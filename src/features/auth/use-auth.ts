@@ -1,9 +1,8 @@
 import { createContext, use } from 'react'
+import type { DemoUser } from './demo-users'
 
-export interface AuthUser {
-  name: string
-  email: string
-}
+/** The signed-in user is a resolved persona (see demo-users → resolveUser). */
+export type AuthUser = DemoUser
 
 export type AuthStatus = 'authenticated' | 'unauthenticated' | 'expired'
 

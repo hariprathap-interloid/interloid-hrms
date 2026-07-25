@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { paths } from '@/config/paths'
 import { cn } from '@/lib/utils'
 import { useAuth } from '../use-auth'
+import { DEFAULT_DEMO_USER } from '../demo-users'
 
 const initialsOf = (name: string) =>
   name
@@ -33,7 +34,7 @@ export function SessionExpiredCard({ variant = 'expired' }: { variant?: 'expired
   }, [variant])
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  const account = user ?? { name: 'Priya Nair', email: 'priya.nair@interloid.io' }
+  const account = user ?? DEFAULT_DEMO_USER
 
   const submit = () => {
     if (state === 'loading' || state === 'success') return

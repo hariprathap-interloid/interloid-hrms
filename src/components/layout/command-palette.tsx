@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Blocks, LayoutDashboard, Layers, Palette, Table2 } from 'lucide-react'
+import { Blocks, LayoutDashboard, Layers, Palette, Radar, Table2 } from 'lucide-react'
 import {
   CommandDialog,
   CommandEmpty,
@@ -16,6 +16,7 @@ import { paths } from '@/config/paths'
 
 const SCREENS = [
   { label: 'Dashboard', icon: LayoutDashboard, href: paths.dashboard.getHref(), shortcut: 'G D' },
+  { label: 'Command center', icon: Radar, href: paths.commandCenter.getHref() },
   { label: 'Design tokens', icon: Palette, href: paths.devTokens.getHref() },
   { label: 'Components', icon: Blocks, href: paths.devComponents.getHref() },
   { label: 'Data-view states', icon: Layers, href: paths.devStates.getHref() },

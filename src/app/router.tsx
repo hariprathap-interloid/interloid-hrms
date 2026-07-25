@@ -30,6 +30,11 @@ export const router = createBrowserRouter([
         lazy: lazy(() => import('./pages/dashboard')),
         HydrateFallback: HomeLoadingSkeleton,
       },
+      {
+        path: paths.commandCenter.path,
+        lazy: lazy(() => import('./pages/command-center')),
+        HydrateFallback: HomeLoadingSkeleton,
+      },
       { path: paths.devTokens.path, lazy: lazy(() => import('./pages/dev-tokens')) },
       { path: paths.devComponents.path, lazy: lazy(() => import('./pages/dev-components')) },
       { path: paths.devStates.path, lazy: lazy(() => import('./pages/dev-states')) },

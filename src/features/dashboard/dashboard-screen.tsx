@@ -14,6 +14,7 @@ import {
 } from '@/components/data-view'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/features/auth/use-auth'
+import { useRole } from '@/features/auth/use-role'
 import { cn } from '@/lib/utils'
 import { AiInsightCard } from './components/ai-insight-card'
 import { KpiCard } from './components/kpi-card'
@@ -32,12 +33,11 @@ import {
  * (sidebar, top bar, ⌘K) is the AppShell's job; this screen is content only.
  * ------------------------------------------------------------------------- */
 
-// Role seam — role will come from the session. The stub carries no role field
-// yet, so default to HR/Admin (demo user, Priya Nair). Subscribing to auth keeps
-// this reactive for when a role lands; map user.role → branch here then.
+// Role seam — reads the shared app role (src/features/auth/use-role). Admin sees
+// the HR/Admin dashboard branch; the rest map straight through.
 function useDashboardRole(): DashboardRole {
-  useAuth()
-  return 'hr'
+  const role = useRole()
+  return role === 'admin' ? 'hr' : role
 }
 
 type Status = 'loading' | 'populated'
@@ -74,11 +74,14 @@ function Shell({ children }: { children: ReactNode }) {
 
 function DashboardContent({ data, status }: { data: DashboardData; status: Status }) {
   const loading = status === 'loading'
+  const { user } = useAuth()
   const { hero, kpis, areaTrend, barChart, donut, approvals, activity } = data
+  // Personalise the greeting to the signed-in persona (admin → Devi, hr → Priya).
+  const greeting = user ? `Good morning, ${user.name.split(' ')[0]}` : hero.greeting
 
   return (
     <Shell>
-      <PageHeader title={hero.greeting} description={hero.date} badges={hero.badges} />
+      <PageHeader title={greeting} description={hero.date} badges={hero.badges} />
 
       <AiInsightCard
         title={hero.aiTitle}

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Blocks, LayoutDashboard, Layers, Palette, Table2 } from 'lucide-react'
+import { Blocks, LayoutDashboard, Layers, Palette, Radar, Table2 } from 'lucide-react'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { paths } from '@/config/paths'
 import { useAuth } from '@/features/auth/use-auth'
@@ -28,6 +28,14 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Dashboard',
         icon: LayoutDashboard,
         href: paths.dashboard.getHref(),
+      },
+      {
+        // HR/Admin-only screen — the route itself is role-gated; nav
+        // role-filtering is a later enhancement (today the only role is HR).
+        key: 'command-center',
+        label: 'Command center',
+        icon: Radar,
+        href: paths.commandCenter.getHref(),
       },
     ],
   },
@@ -117,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const topBarUser = {
     name: user?.name ?? 'Interloid User',
-    role: 'HR Manager',
+    role: user?.title ?? 'Interloid',
     initials: initialsOf(user?.name ?? 'Interloid User'),
   }
 

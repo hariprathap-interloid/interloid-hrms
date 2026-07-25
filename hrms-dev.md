@@ -769,3 +769,115 @@ mesh + gradient headline, glimpse card, modules); `/dashboard` unauthenticated �
 attendance donut + legend, pending-approvals list with approve/reject, recent-activity grid; sidebar
 "Dashboard" active); authenticated `/` → redirects to `/dashboard`. Both themes clean; `tsc -b` +
 `eslint` pass.
+
+---
+
+## HR Command Center + role seam promotion (2026-07-25)
+
+Built `HR Command Center.dc.html` → `/command-center` — org-wide ops for **HR/Admin only**. Reuses the
+shared `components/charts` layer; the heatmap is the one deliberately-non-Recharts chart.
+
+### Role seam — promoted to shared, route-gated
+
+- **`src/features/auth/use-role.ts`** — `AppRole` (`employee|lead|hr|admin`) + `useRole()` (subscribes to
+  auth; defaults to `hr` until the session carries a role) + `hasRole()`. The dashboard's local
+  `useDashboardRole` now **delegates** to it (admin → hr branch), so there's one role source.
+- **`src/features/auth/role-gate.tsx`** — `<RoleGate allow={[…]} fallback={…}>`. `fallback` is a prop
+  (not an import) to keep the auth feature decoupled from the page layer.
+- **`pages/command-center.tsx`** gates with `allow={['hr','admin']}` and `fallback={<NotFoundPage/>}` —
+  a forbidden URL resolves to the full-page 404 (States spec: not an inline 403). Denied branch is dead
+  today (role always `hr`) but the seam is real. Nav item added to the sidebar + command palette
+  (nav role-filtering is a later enhancement; the route is the gate).
+
+### Reused the charts layer (no new wrappers)
+
+- **`Sparkline`** ×8 — 4 hero KPI tiles (white stroke on the gradient) + 4 bento tiles (green/rose per delta).
+- **`AreaTrend`** — "Attendance rate" (Jan–Jul).
+- **`CategoryBarChart`** — "Leave taken by type". ⚠ The design rendered this as **horizontal progress
+  meters**; per "reuse the wrappers, don't create new ones" it's the shared **vertical** bar chart
+  (Annual/Sick/Casual/Unpaid = chart-1/2/3/4). Say the word to add a horizontal `orientation` variant if
+  the meter look matters.
+
+### Punctuality heatmap — the one non-Recharts chart (deferred earlier)
+
+`features/hr-command-center/components/punctuality-heatmap.tsx` — a **CSS grid** (6 dept × 10 day cells),
+not Recharts (which has no first-class heatmap). Intensity is **`color-mix(in srgb, var(--chart-3) N%,
+transparent)`** — green for healthy on-time %, `--chart-4` (amber) for low — so no raw colours and **no
+new token**. Cell rate/heat logic mirrors the design's `heat()` (deterministic `sin` wobble, no random).
+
+### PageHeader / DataViewList / SkeletonKpis
+
+- **PageHeader** — greeting title + date/role description + **Export/Ask-AI actions** (the design put the
+  actions in the gradient hero; moved them to PageHeader so the header component earns its place and the
+  hero stays a clean KPI spotlight).
+- The signature **gradient hero** is a bespoke banner (fixed brand gradient — **reused `--login-hero`**
+  rather than adding a `--command-hero`; on-gradient content uses white utilities, per the login-showcase
+  precedent). Not a PageHeader.
+- **DataViewList** frames "Needs your attention" (approve/retry/investigate rows, `SkeletonRows` loading,
+  a success "all caught up" empty state via `StateMessage` — items resolve out of the list optimistically)
+  and the "What changed today" timeline.
+- **SkeletonKpis** — the bento row's loading state (simulated 600ms fetch).
+- **Violet has no token** — the design's violet AI accents map to `--primary` (indigo); the Interloid-AI
+  card border is `from-primary to-brand-accent`. Flagged, not a new token.
+
+**Dev gotcha:** brand-new Tailwind classes (`grid-cols-10`, `lg:grid-cols-[1.4fr_1fr]`) weren't generated
+by the running dev server's incremental scan — the heatmap collapsed to one column until a **dev-server
+restart** forced a full regen. Valid classes; a production build scans fresh, so no code change needed.
+
+**Verified (2026-07-25, browser, light + dark):** `/command-center` renders for HR — PageHeader
+(greeting + Export/Ask-AI), gradient hero (93.1% live pill + 4 KPI tiles w/ white sparklines), attention
+lane (4 items, AI badges, approve/retry), Interloid-AI card (insights + leave-at-risk + ask input), bento
+row (4 KPIs), attendance-rate area trend + leave-by-type bars (shared wrappers), 6×10 punctuality heatmap
+(green + amber low-cells, distinct cells + legend), "what changed today" timeline; sidebar "Command
+center" active. `tsc -b` + `eslint` pass. **Assets needed: none** (inline Lucide SVG, `--login-hero`
+gradient, `color-mix` heat cells; no new deps).
+
+---
+
+## Demo credentials + persona seam (2026-07-25)
+
+Three static demo accounts, resolved **through the real login flow** (email → shared password → MFA),
+each mapping to a distinct persona so role-gated screens (via `role`) and personal-data screens (via
+`leaveBalance` / `team` / `attendance`) render correctly per role. Still 100% stub — no backend.
+
+| Email                    | Persona       | Role       | Title       |
+| ------------------------ | ------------- | ---------- | ----------- |
+| `admin@interloid.com`    | Devi Krishnan | `admin`    | Super Admin |
+| `hr@interloid.com`       | Priya Nair    | `hr`       | HR Manager  |
+| `employee@interloid.com` | Arjun Rao     | `employee` | Analyst     |
+
+**Shared demo password: `interloid`** · MFA code: `123456` (both shown on the login screen's "Demo
+accounts" hint). These are stub demo values, intentionally visible.
+
+### The seam — `src/features/auth/demo-users.ts`
+
+- `resolveUser(email): DemoUser | null` — **the single email→persona lookup the real API replaces.**
+  Swap its body for the login response / `GET /me` mapping and nothing else changes: the login flow,
+  the auth provider, the role seam, and every screen already read the returned `DemoUser`.
+- `DemoUser` carries `id · name · email · role · title · department` + the fields screens read:
+  `leaveBalance {annual,sick,casual}`, `team {name,size}`, `attendance {checkedInAt,monthPct,status}`.
+- `DEMO_PASSWORD`, `DEFAULT_DEMO_USER` (SSO / fallback = the HR persona), `DEMO_ACCOUNTS` (login hint).
+- `AppRole` now lives here (re-exported from `use-role.ts` for existing imports).
+
+### Wiring (one place each)
+
+- **`use-auth.ts`** — `AuthUser = DemoUser` (the persisted session user is a persona).
+- **`use-role.ts`** — `useRole()` now returns `user?.role ?? 'hr'` (was hard-coded `'hr'`). This is what
+  makes `RoleGate` real: an **employee is denied `/command-center` (→ 404)**; hr/admin are allowed.
+- **`login-panel.tsx`** — the email step calls `resolveUser(email)` and checks `DEMO_PASSWORD`; on
+  mismatch it shows an inline "credentials don't match a demo account" error, else stores the resolved
+  persona and advances to MFA, which signs in with it. **SSO** signs in as `DEFAULT_DEMO_USER`. Added the
+  "Demo accounts" hint block. The `resolveUser + password` check is the exact block a real API call replaces.
+- **`auth-provider.tsx`** / **`session-expired-card.tsx`** — default/fallback user is `DEFAULT_DEMO_USER`
+  (persona), not a bare `{name,email}`.
+- **Identity now reflects the persona:** TopBar role reads `user.title` (was hard-coded "HR Manager");
+  the dashboard + command-center greetings read the persona's first name (admin → "Devi", hr → "Priya").
+
+**Verified (2026-07-25, browser — full login flow per role):** employee@ → Arjun Rao/Analyst → dashboard
+employee branch + `/command-center` returns 404 (gated); hr@ → Priya Nair/HR Manager → command center
+accessible, greeting "Good morning, Priya"; admin@ → Devi Krishnan/Super Admin → command center
+accessible, greeting "Good morning, Devi". `tsc -b` + `eslint` pass. No new deps, no assets.
+
+> Note: the dashboard's **employee** branch is still the "coming soon" stub (audit-flagged) — the persona
+> now carries the leave/team/attendance data those screens will read once built; this task added the
+> credentials + seam, not the personal screens.

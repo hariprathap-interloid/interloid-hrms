@@ -7,6 +7,10 @@ export const paths = {
     path: '/dashboard',
     getHref: () => '/dashboard',
   },
+  commandCenter: {
+    path: '/command-center',
+    getHref: () => '/command-center',
+  },
   login: {
     path: '/login',
     getHref: () => '/login',

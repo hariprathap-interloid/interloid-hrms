@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, type AuthContextValue, type AuthState, type AuthUser } from './use-auth'
+import { DEFAULT_DEMO_USER } from './demo-users'
 
 /* Stubbed client-side auth — session state in sessionStorage so it survives a
    refresh. No backend: signIn/expire just flip state, and the route guard
-   (ProtectedLayout) redirects based on `status`. */
+   (ProtectedLayout) redirects based on `status`. The user is a resolved persona
+   (demo-users → resolveUser), which carries role + personal-data fields. */
 
 const STORAGE_KEY = 'iws.auth'
-const DEMO_USER: AuthUser = { name: 'Priya Nair', email: 'priya.nair@interloid.io' }
+const DEMO_USER: AuthUser = DEFAULT_DEMO_USER
 
 function readStored(): AuthState {
   try {
