@@ -54,10 +54,12 @@ export function SkeletonRows({
   )
 }
 
-/** KPI-card placeholders: label / value / sub bars in a bordered tile. */
-export function SkeletonKpis({ cards = 4 }: { cards?: number }) {
+/** KPI-card placeholders: label / value / sub bars in a bordered tile.
+ *  `className` overrides the grid (defaults to a 2-col grid) so a caller can
+ *  match its populated KPI layout. */
+export function SkeletonKpis({ cards = 4, className }: { cards?: number; className?: string }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className={cn('grid grid-cols-2 gap-3', className)}>
       {PLACEHOLDER_KEYS.slice(0, cards).map((key) => (
         <div
           key={key}

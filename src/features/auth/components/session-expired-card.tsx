@@ -45,7 +45,7 @@ export function SessionExpiredCard({ variant = 'expired' }: { variant?: 'expired
     timer.current = setTimeout(() => {
       setState('success')
       signIn(account)
-      timer.current = setTimeout(() => void navigate(paths.home.getHref()), 700)
+      timer.current = setTimeout(() => void navigate(paths.dashboard.getHref()), 700)
     }, 950)
   }
 
@@ -113,7 +113,7 @@ export function SessionExpiredCard({ variant = 'expired' }: { variant?: 'expired
       </div>
 
       <div className="bg-muted mb-4 flex items-center gap-2.5 rounded-[11px] px-3.5 py-2.5">
-        <span className="from-primary to-accent text-primary-foreground flex size-[34px] shrink-0 items-center justify-center rounded-full bg-linear-to-br text-[13px] font-semibold">
+        <span className="from-primary to-brand-accent text-primary-foreground flex size-[34px] shrink-0 items-center justify-center rounded-full bg-linear-to-br text-[13px] font-semibold">
           {initialsOf(account.name)}
         </span>
         <div className="min-w-0">

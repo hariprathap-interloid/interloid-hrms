@@ -47,7 +47,7 @@ export function AccountSetupPanel() {
   }
 
   const brandTile = (
-    <div className="from-primary to-accent text-primary-foreground mb-4 flex size-[46px] items-center justify-center rounded-[13px] bg-linear-to-br text-[22px] font-bold shadow-lg">
+    <div className="from-primary to-brand-accent text-primary-foreground mb-4 flex size-[46px] items-center justify-center rounded-[13px] bg-linear-to-br text-[22px] font-bold shadow-lg">
       I
     </div>
   )

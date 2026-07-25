@@ -22,7 +22,14 @@ const SIDEBAR_SIZES = {
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
-    items: [{ key: 'home', label: 'Dashboard', icon: LayoutDashboard, href: paths.home.getHref() }],
+    items: [
+      {
+        key: 'dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        href: paths.dashboard.getHref(),
+      },
+    ],
   },
   {
     label: 'Design System',

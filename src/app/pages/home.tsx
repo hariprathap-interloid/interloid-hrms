@@ -1,10 +1,17 @@
-import { env } from '@/config/env'
+import { Navigate } from 'react-router-dom'
+import { paths } from '@/config/paths'
+import { useAuth } from '@/features/auth/use-auth'
+import { MarketingHome } from '@/features/marketing/marketing-home'
 
+/**
+ * "/" — public marketing landing. An already-authenticated visitor is sent
+ * straight to their dashboard; everyone else sees the marketing page.
+ */
 export default function HomePage() {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
-      <h1 className="text-2xl font-semibold">{env.VITE_APP_NAME}</h1>
-      <p className="text-muted-foreground">Welcome to {env.VITE_APP_NAME} HRMS.</p>
-    </div>
-  )
+  const { status } = useAuth()
+
+  if (status === 'authenticated') {
+    return <Navigate to={paths.dashboard.getHref()} replace />
+  }
+  return <MarketingHome />
 }

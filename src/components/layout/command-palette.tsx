@@ -15,7 +15,7 @@ import { paths } from '@/config/paths'
    command primitive. Opened from the TopBar search affordance / global ⌘K. */
 
 const SCREENS = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: paths.home.getHref(), shortcut: 'G D' },
+  { label: 'Dashboard', icon: LayoutDashboard, href: paths.dashboard.getHref(), shortcut: 'G D' },
   { label: 'Design tokens', icon: Palette, href: paths.devTokens.getHref() },
   { label: 'Components', icon: Blocks, href: paths.devComponents.getHref() },
   { label: 'Data-view states', icon: Layers, href: paths.devStates.getHref() },

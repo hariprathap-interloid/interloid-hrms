@@ -10,7 +10,7 @@ export default function NotFoundPage() {
   return (
     <div className="bg-background flex min-h-dvh items-center justify-center p-6">
       <div className="animate-in fade-in max-w-[420px] text-center duration-300">
-        <div className="from-primary to-accent bg-linear-to-br bg-clip-text font-mono text-[88px] leading-none font-semibold tracking-[-0.04em] text-transparent">
+        <div className="from-primary to-brand-accent bg-linear-to-br bg-clip-text font-mono text-[88px] leading-none font-semibold tracking-[-0.04em] text-transparent">
           404
         </div>
         <div className="text-foreground mt-[18px] text-[19px] font-semibold">
@@ -29,7 +29,7 @@ export default function NotFoundPage() {
         <div className="mt-6 flex flex-wrap justify-center gap-2.5">
           <Button
             className="h-11 gap-2 rounded-[11px] text-sm"
-            onClick={() => void navigate(paths.home.getHref())}
+            onClick={() => void navigate(paths.dashboard.getHref())}
           >
             <House />
             Back to dashboard

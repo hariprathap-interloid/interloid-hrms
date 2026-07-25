@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 export function AuthBrandMark({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center justify-center', className)}>
-      <div className="from-primary to-accent text-primary-foreground flex size-[38px] items-center justify-center rounded-[11px] bg-linear-to-br text-[18px] font-bold shadow-lg">
+      <div className="from-primary to-brand-accent text-primary-foreground flex size-[38px] items-center justify-center rounded-[11px] bg-linear-to-br text-[18px] font-bold shadow-lg">
         I
       </div>
     </div>

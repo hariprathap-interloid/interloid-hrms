@@ -9,6 +9,10 @@ const lazy = (loader: () => Promise<{ default: React.ComponentType }>) => () =>
   loader().then((module) => ({ Component: module.default }))
 
 export const router = createBrowserRouter([
+  // ----- Public marketing landing at "/" (no shell, no guard). Authenticated
+  //       users are redirected to /dashboard from inside the page. -----
+  { path: paths.home.path, lazy: lazy(() => import('./pages/home')) },
+
   // ----- Public auth routes (no shell, no guard) -----
   { path: paths.login.path, lazy: lazy(() => import('./pages/login')) },
   { path: paths.accountSetup.path, lazy: lazy(() => import('./pages/account-setup')) },
@@ -22,8 +26,8 @@ export const router = createBrowserRouter([
     errorElement: <ServerErrorPage />,
     children: [
       {
-        path: paths.home.path,
-        lazy: lazy(() => import('./pages/home')),
+        path: paths.dashboard.path,
+        lazy: lazy(() => import('./pages/dashboard')),
         HydrateFallback: HomeLoadingSkeleton,
       },
       { path: paths.devTokens.path, lazy: lazy(() => import('./pages/dev-tokens')) },

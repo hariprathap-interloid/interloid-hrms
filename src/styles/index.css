@@ -34,6 +34,13 @@
   --muted: #eef1f6;
   --secondary: #eef1f6;
   --secondary-foreground: #0f172a;
+  /* shadcn's --accent = the hover/active tint for menu surfaces (dropdown item,
+     select option, command item, context menu) — a neutral tint matching --muted.
+     This is shadcn's meaning, NOT the design's brand accent (that's --brand-accent
+     below). The two concepts collided on one name; see hrms-dev.md
+     "shadcn semantic collisions". */
+  --accent: #eef1f6;
+  --accent-foreground: #0f172a;
   --border: #e2e8f0;
   --input: #e2e8f0;
 
@@ -41,9 +48,12 @@
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
   --primary-bg: #eef2ff;
-  --accent: #0ea5e9;
-  --accent-foreground: #ffffff;
-  --accent-bg: #e0f2fe;
+  /* Design's secondary brand colour (sky). Named --brand-accent so it doesn't
+     overwrite shadcn's --accent menu-hover tint. Drives brand gradients (mark
+     tiles, 404) and the toast accent border/icon tint. */
+  --brand-accent: #0ea5e9;
+  --brand-accent-foreground: #ffffff;
+  --brand-accent-bg: #e0f2fe;
   --ring: #4f46e5;
   --ring-subtle: rgba(79, 70, 229, 0.4);
 
@@ -131,15 +141,17 @@
   --muted: #1b2536;
   --secondary: #1b2536;
   --secondary-foreground: #e6eaf2;
+  --accent: #1b2536;
+  --accent-foreground: #e6eaf2;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
 
   --primary: #6366f1;
   --primary-foreground: #ffffff;
   --primary-bg: rgba(99, 102, 241, 0.16);
-  --accent: #38bdf8;
-  --accent-foreground: #0b1120;
-  --accent-bg: rgba(56, 189, 248, 0.15);
+  --brand-accent: #38bdf8;
+  --brand-accent-foreground: #0b1120;
+  --brand-accent-bg: rgba(56, 189, 248, 0.15);
   --ring: #6366f1;
   --ring-subtle: rgba(99, 102, 241, 0.5);
 
@@ -207,6 +219,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -216,9 +230,9 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-bg: var(--primary-bg);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent-bg: var(--accent-bg);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --color-brand-accent-bg: var(--brand-accent-bg);
 
   /* Semantic */
   --color-success: var(--success);

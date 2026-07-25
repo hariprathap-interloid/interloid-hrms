@@ -36,6 +36,25 @@ export default defineConfig([
     },
   },
   {
+    // shadcn's chart primitive is vendored verbatim and built on Recharts'
+    // loosely-typed tooltip/legend payloads (lots of `any`), plus React-19
+    // stylistic patterns. It's not app-authored code (CLAUDE.md: never edit
+    // ui/ except to add a cva variant), so relax the type-aware/react rules it
+    // trips for this one file rather than diverging from upstream.
+    files: ['src/components/ui/chart.tsx'],
+    rules: {
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      'react-x/no-use-context': 'off',
+      'react-x/no-context-provider': 'off',
+      'react-x/no-array-index-key': 'off',
+      'react-dom/no-dangerously-set-innerhtml': 'off',
+    },
+  },
+  {
     files: ['test/**/*.{ts,tsx}'],
     languageOptions: {
       globals: globals.jest,

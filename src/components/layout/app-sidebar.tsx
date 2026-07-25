@@ -76,7 +76,7 @@ export function AppSidebar({ groups, activeKey, brand = DEFAULT_BRAND, footer }:
           'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0',
         )}
       >
-        <div className="from-primary to-accent text-primary-foreground flex size-[30px] shrink-0 items-center justify-center rounded-[8px] bg-linear-to-br text-[15px] font-bold">
+        <div className="from-primary to-brand-accent text-primary-foreground flex size-[30px] shrink-0 items-center justify-center rounded-[8px] bg-linear-to-br text-[15px] font-bold">
           {brand.initial}
         </div>
         <div className="min-w-0 group-data-[collapsible=icon]:hidden">

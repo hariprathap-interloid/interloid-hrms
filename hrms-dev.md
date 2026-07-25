@@ -62,6 +62,69 @@ design-system page). A `prefers-reduced-motion` guard collapses all animation/tr
 
 ---
 
+## shadcn semantic collisions
+
+A few token **names** carry a different meaning in shadcn's primitives than in the design
+source. Where both meanings are the same concept, one name is fine. Where they are **two
+different concepts that happen to share a name**, keeping them on one variable makes shadcn's
+components paint with the design's colour (or vice-versa). These entries disambiguate such a
+name into two — this is **not** a break from the 1:1 token mapping; it is recognising that the
+name mapped two unrelated roles at once.
+
+### `accent` — resolved (2026-07-25)
+
+Two unrelated concepts shared the `--accent` name:
+
+- **shadcn's `--accent`** = the **hover / active tint for menu surfaces**. `DropdownMenuItem`,
+  `SelectItem`, `CommandItem`, and sub-triggers all paint `focus:bg-accent
+focus:text-accent-foreground` (+ `data-open:bg-accent`). shadcn intends a **neutral tint**
+  (≈ `--muted`).
+- **the design's `accent`** (`tokens/colors.css`) = the **secondary brand colour** (sky,
+  `#0ea5e9` / `#38bdf8`) — used for brand gradients (mark tiles, 404) and the toast accent
+  border/icon tint. A saturated brand hue, not a menu tint.
+
+While both lived on `--accent`, every menu-hover row rendered a **bright sky fill with white
+text** instead of a subtle neutral — visibly wrong on the theme-toggle menu, the user menu, the
+row ⋯ menu, and the select dropdown, in both themes. (`command.tsx` had a local workaround —
+`data-[selected=true]:bg-muted` instead of `bg-accent` — which papered over the palette only.)
+
+**Disambiguation:**
+
+- `--accent` / `--accent-foreground` → kept as **shadcn intends**: the neutral menu-hover tint,
+  matching `--muted` (`#eef1f6` / `#0f172a` light, `#1b2536` / `#e6eaf2` dark). Lives in the
+  **Surfaces & text** group now (it is a neutral UI surface, not brand).
+- the design's brand colour → moved to **`--brand-accent`** / `--brand-accent-foreground` /
+  `--brand-accent-bg` (values unchanged; sits in the **Brand** group). Utilities: `bg-brand-accent`,
+  `text-brand-accent`, `to-brand-accent`, etc. The six brand-gradient consumers were repointed
+  `to-accent` → `to-brand-accent` (`app-sidebar`, `top-bar`, `auth-shell`, `account-setup-panel`,
+  `session-expired-card`, `not-found`).
+- `command.tsx` reverted to stock `data-[selected=true]:bg-accent
+data-[selected=true]:text-accent-foreground` — the workaround is no longer needed now that
+  `--accent` is the correct neutral tint.
+
+`--sidebar-accent` was **not** part of this — it is a separate token, already the neutral rail
+tint (`#eef1f6` / `#1b2536`), and shadcn's sidebar hover reads it correctly.
+
+### Swept for the same collision — `muted`, `secondary`, `ring` all clean (2026-07-25)
+
+Checked whether the other names shadcn overloads carry a second, conflicting design concept.
+None do — each is a **single concept** shared by both, so no split is warranted:
+
+- **`--muted`** — shadcn uses `bg-muted` / `text-muted-foreground` for subtle neutral surfaces
+  (table footer/row-hover, drawer handle, progress track, avatar, skeleton, tab-list, filter
+  chips, info strips) and secondary text. The design's `--muted` is the same neutral surface
+  (`#eef1f6` / `#1b2536`). Same concept — no collision.
+- **`--secondary`** — consumed only by the Button `secondary` and Badge `secondary` variants:
+  shadcn's low-emphasis **neutral filled** surface. The design value is that same neutral
+  (`#eef1f6`, incidentally equal to `--muted`, as in shadcn stock). No design usage assigns
+  `secondary` a brand meaning. No collision.
+- **`--ring`** — the focus / emphasis outline colour (primary indigo). The design uses it both
+  as the focus ring and as a hover-border, but those are one concept (an emphasis outline). Its
+  only prior overload — the _translucent_ variant — was already forked to **`--ring-subtle`**
+  during the AC-1 focus-ring work. No naming collision remains.
+
+---
+
 ## Fonts
 
 Both families are bundled via **Fontsource variable packages** (compiled into the build,
@@ -625,3 +688,84 @@ persisted user; re-auth → back to `/`; Forgot / Reset / Account-Setup render; 
 **Verified (2026-07-24, browser):** TopBar renders (title "Data table / Design System", ⌘K box, bell
 badge 3, "Priya Nair / HR Manager"); ⌘K opens the palette → typing "token" filters → Enter navigates
 to `/dev/tokens` and the title updates; `/dev/throw` → the live full-page ServerErrorPage.
+
+---
+
+## Home + Company Dashboard + routing restructure (2026-07-25)
+
+Built the two dashboard-family screens from `8f1502f5`, grounded in the design's own `CLAUDE.md`
+file manifest (which classifies every `.dc.html`). The manifest was decisive: `Home.dc.html` is a
+**public marketing landing at `/`** (outside the shell), and `Company Dashboard.dc.html` is the
+**authenticated landing at `/dashboard`, roles: ALL** — the post-login screen every role sees.
+`HR Command Center` (`/command-center`, HR+Admin only) is separate ops, **not** the default landing.
+
+### Routing restructure — design-faithful split
+
+Our app previously guarded `/` as the landing. Now:
+
+- **`/` → public marketing Home** (moved outside `ProtectedLayout`, like Login). An authenticated
+  visitor is bounced to `/dashboard` from inside `pages/home.tsx` (`useAuth` → `<Navigate>`).
+- **`/dashboard` → Company Dashboard** (guarded; the post-login target). Added `paths.dashboard`.
+- **`paths.home` consumers repointed** (grep-driven inventory, shown before rewiring): 6 → `/dashboard`
+  (`app-shell` nav, `command-palette`, `login-panel` post-login, `session-expired-card` re-auth,
+  `not-found` + `server-error` "Back to dashboard"). **`error-state.tsx` is auth-conditional** — the
+  top-level error escape (used by `error-fallback` + route `error.tsx`, both inside `AuthProvider`)
+  reads `useAuth`: authenticated → `/dashboard` ("Back to dashboard"), otherwise → `/` ("Go back home")
+  for the pre-auth case. So an authed user hitting an error returns to their app, not the splash.
+
+### Shared chart layer — `src/components/charts/` (new dep: `recharts` ^3.8, via `npx shadcn add chart`)
+
+Charts recur across the design (Company Dashboard, HR Command Center, Attendance — Team Overview has
+none), so these are a **shared pattern**, not dashboard-local. `shadcn add chart` added `ui/chart.tsx`
+(new primitive, not an edit — authorized). Four wrappers, all bound to the app's `--chart-1..5` scale:
+
+- `AreaTrend` — Recharts `AreaChart` + gradient fill. Uses a **numeric data-relative Y domain**
+  (`[min-pad, max+pad]`) so small trends (e.g. headcount 1180→1248) read as a curve, not a flat line
+  pinned to 0. (Recharts v3's function-form `domain` renders empty — use numeric.)
+- `CategoryBarChart` — `BarChart` with per-bar `<Cell fill>` so the design's highlight bars survive
+  (Design=amber `--chart-4`, Sales=rose `--chart-5` against indigo `--chart-1`).
+- `DonutChart` — `PieChart` ring + centred `<Label>` total + swatch legend.
+- `Sparkline` — deliberately **inline SVG, not Recharts** (a dashboard renders 6+; one polyline each
+  is far cheaper than mounting a chart per KPI). Matches the design's `viewBox 0 0 100 30`.
+
+**Token note:** the `.dc.html` prototypes coloured charts from screen-local hexes (`--green #12A150`,
+`--amber #E08600`); the design **system** readme says charts use `--chart-1..5`, and our repo defines
+them — so the wrappers bind to the token scale (indigo/sky/green/amber/rose). chart-1/2/5 are exact
+matches; green/amber differ by a few % (screen-local vs token). Both themes fork automatically.
+
+### Company Dashboard — `src/features/dashboard/` (HR/Admin branch complete; role seam in place)
+
+Role-aware by design. `useDashboardRole()` (currently defaults to `'hr'` — subscribes to `useAuth`,
+map `user.role` when the session carries one) → `getDashboardData(role)`: **HR/Admin fully populated;
+Employee/Lead return `null`** → screen shows a "coming soon" note. Real branching structure, one branch
+complete — Employee/Lead are a **data fill-in from the design's isEmp/isLead branches, not a refactor**.
+
+- `data.ts` — role-keyed content (hero, 6 KPIs, area/bar/donut, approvals, activity).
+- `components/kpi-card.tsx` — metric tile: icon + label, value, trailing `Sparkline`, semantic delta
+  chip + sub. `<button>` when `onClick` given, else static.
+- `components/ai-insight-card.tsx` — the "AI insight" banner + recommendation chips.
+- `dashboard-screen.tsx` — composition: `PageHeader` (greeting + date + status badges) · AI insight ·
+  KPI row (`SkeletonKpis` loading) · `AreaTrend`+`CategoryBarChart` / `DonutChart` · **Pending
+  approvals** via `DataViewList` (approve/reject; `SkeletonRows` loading, `EmptyState` empty) · **Recent
+  activity** via `DataViewList`. A simulated 600ms fetch exercises the skeletons on mount.
+- **Dropped the design's embedded People `DataTable`** (per instruction: "not DataTable" — that grid
+  lives on Employees/`/dev/table`). Heatmap (HR Command Center) deferred — Recharts has no first-class
+  heatmap; it'll be a CSS grid later.
+- `SkeletonKpis` gained an optional `className` (non-breaking; default 2-col) so the loading grid
+  matches the populated 6-up layout.
+
+### Marketing Home — `src/features/marketing/marketing-home.tsx`
+
+Faithful to `Home.dc.html`: own glass chrome (not AppShell) — brand nav + `ThemeToggle`, `--mesh` hero
+with a `from-primary to-brand-accent` gradient headline, an approvals-queue glimpse card, 4 module
+cards, 4 role rows, footer. Public route; links into `/login`. Uses `bg-glass`/`border-glass-border`
+and the brand-accent gradient (post-collision token). **Assets needed: none** — inline Lucide SVG,
+gradient brand tile, `--mesh` token; `recharts` is the only new dep (authorized).
+
+**Verified (2026-07-25, browser, light + dark):** `/` unauthenticated → marketing landing (no shell,
+mesh + gradient headline, glimpse card, modules); `/dashboard` unauthenticated → guard redirects to
+`/login`; seeded session → `/dashboard` renders the full HR dashboard (PageHeader + badges, AI insight,
+6 KPIs with sparklines, rising headcount area trend, dept bar chart with amber/rose highlights, 87.8%
+attendance donut + legend, pending-approvals list with approve/reject, recent-activity grid; sidebar
+"Dashboard" active); authenticated `/` → redirects to `/dashboard`. Both themes clean; `tsc -b` +
+`eslint` pass.

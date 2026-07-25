@@ -107,7 +107,7 @@ export function LoginPanel() {
       if (fullCode === DEMO_CODE) {
         signIn({ name: 'Priya Nair', email: email || 'priya.nair@interloid.io' })
         setStep('done')
-        timer.current = setTimeout(() => void navigate(paths.home.getHref()), 1100)
+        timer.current = setTimeout(() => void navigate(paths.dashboard.getHref()), 1100)
         return
       }
       const nextAttempts = attempts + 1

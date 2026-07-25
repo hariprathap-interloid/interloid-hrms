@@ -13,7 +13,7 @@ export default function ServerErrorPage() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const attempts = useRef(0)
 
-  const goHome = () => void navigate(paths.home.getHref())
+  const goHome = () => void navigate(paths.dashboard.getHref())
 
   // Demo: the first retry fails, the second recovers.
   const retry = () => {

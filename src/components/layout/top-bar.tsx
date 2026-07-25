@@ -116,7 +116,7 @@ export function TopBar({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-10 gap-2.5 px-1.5">
-            <span className="from-primary to-accent text-primary-foreground flex size-8 items-center justify-center rounded-full bg-linear-to-br text-[12px] font-semibold">
+            <span className="from-primary to-brand-accent text-primary-foreground flex size-8 items-center justify-center rounded-full bg-linear-to-br text-[12px] font-semibold">
               {user.initials}
             </span>
             <span className="hidden text-left sm:block">
