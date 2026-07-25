@@ -57,6 +57,17 @@ const PERSONAS: Record<string, DemoUser> = {
     team: { name: 'People Ops', size: 8 },
     attendance: { checkedInAt: '09:15', monthPct: 97, status: 'present' },
   },
+  'lead@interloid.com': {
+    id: 'ITL-0118',
+    name: 'Rohan Gupta',
+    email: 'lead@interloid.com',
+    role: 'lead',
+    title: 'Team Lead',
+    department: 'Engineering',
+    leaveBalance: { annual: 10, sick: 7, casual: 5 },
+    team: { name: 'Engineering', size: 12 },
+    attendance: { checkedInAt: '09:10', monthPct: 96, status: 'present' },
+  },
   'employee@interloid.com': {
     id: 'ITL-0205',
     name: 'Arjun Rao',
@@ -81,7 +92,7 @@ export function resolveUser(email: string): DemoUser | null {
 /** The default persona (SSO / no-email paths, and the provider fallback). */
 export const DEFAULT_DEMO_USER: DemoUser = PERSONAS['hr@interloid.com']!
 
-/** Compact list for the login hint (order: admin, hr, employee). */
+/** Compact list for the login hint (order: admin, hr, lead, employee). */
 export const DEMO_ACCOUNTS = Object.values(PERSONAS).map((user) => ({
   email: user.email,
   title: user.title,

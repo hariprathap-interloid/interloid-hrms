@@ -1,10 +1,23 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Blocks, LayoutDashboard, Layers, Palette, Radar, Table2 } from 'lucide-react'
+import {
+  Bell,
+  Blocks,
+  CalendarClock,
+  CalendarDays,
+  CircleUser,
+  LayoutDashboard,
+  Layers,
+  Palette,
+  Radar,
+  Table2,
+  Users,
+} from 'lucide-react'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { paths } from '@/config/paths'
 import { useAuth } from '@/features/auth/use-auth'
+import { useRole, type AppRole } from '@/features/auth/use-role'
 import { AppSidebar, type NavGroup } from './app-sidebar'
 import { CommandPalette } from './command-palette'
 import { TopBar } from './top-bar'
@@ -30,12 +43,41 @@ const NAV_GROUPS: NavGroup[] = [
         href: paths.dashboard.getHref(),
       },
       {
-        // HR/Admin-only screen — the route itself is role-gated; nav
-        // role-filtering is a later enhancement (today the only role is HR).
         key: 'command-center',
         label: 'Command center',
         icon: Radar,
         href: paths.commandCenter.getHref(),
+        roles: ['hr', 'admin'],
+      },
+      {
+        // Directory is a management screen (HR/Admin); Team Leads may view it
+        // read-only. Row/bulk actions are further gated in-screen via
+        // permitActions. Plain employees don't get the item.
+        key: 'employees',
+        label: 'Employees',
+        icon: Users,
+        href: paths.employees.getHref(),
+        roles: ['hr', 'admin', 'lead'],
+      },
+    ],
+  },
+  {
+    // Employee self-service — every role has these personal screens.
+    label: 'My workspace',
+    items: [
+      {
+        key: 'me-attendance',
+        label: 'My attendance',
+        icon: CalendarClock,
+        href: paths.meAttendance.getHref(),
+      },
+      { key: 'me-leave', label: 'My leave', icon: CalendarDays, href: paths.meLeave.getHref() },
+      { key: 'me-profile', label: 'My profile', icon: CircleUser, href: paths.meProfile.getHref() },
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        icon: Bell,
+        href: paths.notifications.getHref(),
       },
     ],
   },
@@ -70,6 +112,16 @@ function resolveActiveKey(groups: NavGroup[], pathname: string) {
   return match?.key
 }
 
+/** Drop nav items the current role may not see; drop groups left empty. */
+function filterNavByRole(groups: NavGroup[], role: AppRole): NavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || item.roles.includes(role)),
+    }))
+    .filter((group) => group.items.length > 0)
+}
+
 function FooterStatus() {
   return (
     <div className="border-sidebar-border flex items-center gap-2 rounded-lg border px-2.5 py-1.5 group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:px-0">
@@ -92,17 +144,21 @@ const initialsOf = (name: string) =>
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
   const { user, signOut, expire } = useAuth()
+  const role = useRole()
   const [paletteOpen, setPaletteOpen] = useState(false)
 
+  // Role-filtered nav — the sidebar expects already-filtered groups.
+  const navGroups = useMemo(() => filterNavByRole(NAV_GROUPS, role), [role])
+
   const activeKey = useMemo(
-    () => resolveActiveKey(NAV_GROUPS, location.pathname),
-    [location.pathname],
+    () => resolveActiveKey(navGroups, location.pathname),
+    [navGroups, location.pathname],
   )
 
   // Page title/crumb for the TopBar, derived from the active nav item.
   let title = 'Interloid'
   let crumb: string | undefined
-  for (const group of NAV_GROUPS) {
+  for (const group of navGroups) {
     const item = group.items.find((navItem) => navItem.key === activeKey)
     if (item) {
       title = item.label
@@ -133,7 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SidebarProvider style={SIDEBAR_SIZES}>
       {/* Nav items navigate via react-router <Link> (built inside AppSidebar), so
           no onNavigate handler is needed here — hrefs carry the destinations. */}
-      <AppSidebar groups={NAV_GROUPS} activeKey={activeKey} footer={<FooterStatus />} />
+      <AppSidebar groups={navGroups} activeKey={activeKey} footer={<FooterStatus />} />
       <SidebarInset>
         <TopBar
           title={title}

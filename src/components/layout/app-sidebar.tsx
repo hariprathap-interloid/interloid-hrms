@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
+import type { AppRole } from '@/features/auth/use-role'
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +37,9 @@ export interface NavItem {
   badge?: number | string
   /** Destination handed back through `onNavigate`. */
   href: string
+  /** Roles that may see this item. Omit = visible to all. Filtered by the
+   *  caller (AppShell) before the groups reach the sidebar. */
+  roles?: readonly AppRole[]
 }
 
 export interface NavGroup {

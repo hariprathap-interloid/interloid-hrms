@@ -836,14 +836,17 @@ gradient, `color-mix` heat cells; no new deps).
 
 ## Demo credentials + persona seam (2026-07-25)
 
-Three static demo accounts, resolved **through the real login flow** (email → shared password → MFA),
+Static demo accounts, resolved **through the real login flow** (email → shared password → MFA),
 each mapping to a distinct persona so role-gated screens (via `role`) and personal-data screens (via
 `leaveBalance` / `team` / `attendance`) render correctly per role. Still 100% stub — no backend.
+(`lead@` was added later so the Employees view-only `permitActions` path is testable inside its allowed
+roles — see the Employees section.)
 
 | Email                    | Persona       | Role       | Title       |
 | ------------------------ | ------------- | ---------- | ----------- |
 | `admin@interloid.com`    | Devi Krishnan | `admin`    | Super Admin |
 | `hr@interloid.com`       | Priya Nair    | `hr`       | HR Manager  |
+| `lead@interloid.com`     | Rohan Gupta   | `lead`     | Team Lead   |
 | `employee@interloid.com` | Arjun Rao     | `employee` | Analyst     |
 
 **Shared demo password: `interloid`** · MFA code: `123456` (both shown on the login screen's "Demo
@@ -881,3 +884,140 @@ accessible, greeting "Good morning, Devi". `tsc -b` + `eslint` pass. No new deps
 > Note: the dashboard's **employee** branch is still the "coming soon" stub (audit-flagged) — the persona
 > now carries the leave/team/attendance data those screens will read once built; this task added the
 > credentials + seam, not the personal screens.
+
+---
+
+## Employees screen `/employees` + server-side pagination + nav role-filtering (2026-07-25)
+
+Promoted the `/dev/table` demo into the real Employees route under the shell (design: Employees.dc.html),
+composing the **built** `PageHeader` + `FilterBar` + `DataTable` + cells (`PersonCell`/`MonoText`/
+`TableBadge`). No `ui/` changes. **Assets: none** (inline Lucide icons; no new deps).
+
+### Server-side / controlled pagination — the seam
+
+- **`features/employees/data.ts`** — a 48-row directory + **`fetchEmployees(query)`**, the one place a
+  real `GET /employees?q&filter[…]&sort&page&per_page` plugs in. Same shape in/out (`{page, pageSize,
+sort, filters, q}` → `{rows, total}`); swap the body for a fetch and the screen is unchanged.
+- **`features/employees/employees-screen.tsx`** drives the DataTable's controlled path (`page`/`total`/
+  `pageSize`/`onPageChange` + `sort`/`onSortChange`) — the **first real exercise of that path under the
+  shell**. Every page/sort/filter/search change re-queries the seam behind a ~300 ms latency: loading is
+  **derived** from a `queryKey` (stale ⇒ `status:'loading'`), and the only `setState` is in the async
+  callback, so there's no `set-state-in-effect` cascade. The `useEffect` cleanup cancels superseded
+  requests (and debounces typing). Toolbar = a search `Input` + `FilterBar` (Department/Type facets);
+  PageHeader tabs (All/Active/On leave/Probation) drive the status filter; the "N total" badge tracks
+  the filtered count.
+
+### Role-driven affordances (`permitActions`) + nav role visibility
+
+- **`permitActions = role === 'hr' || role === 'admin'`.** HR/Admin get selection + bulk bar
+  (Export/Deactivate) + per-row ⋯ (View/Edit/Deactivate) + the "Add employee" primary action. Other
+  roles get a **read-only roster** — DataTable strips checkboxes/bulk/⋯ while keeping the data (the
+  design's "data stays visible, affordances the role lacks are stripped").
+- **Nav role visibility (completes the filtering deferred in the command-center pass):** `NavItem` gained
+  an optional `roles?: AppRole[]`; `AppShell` filters `NAV_GROUPS` by `useRole()` before handing them to
+  the sidebar (which already expects pre-filtered groups). Employees → `['hr','admin','lead']`; Command
+  center → `['hr','admin']`; the rest are unrestricted. So an **employee sees neither** Employees nor
+  Command center in nav (only Dashboard + dev).
+- **Strict design scope:** the page is wrapped in `RoleGate allow={['hr','admin','lead']}` (fallback =
+  full-page 404), matching the manifest (HR/Admin manage; Team Leads view read-only). A plain **employee
+  typing `/employees` hits the 404**, not the roster. The view-only `permitActions` path is exercised by
+  the **`lead@interloid.com` Team Lead persona** (Rohan Gupta, added for this) — the test stays _inside_
+  the allowed roles rather than widening the route to reach it.
+
+**Verified (2026-07-25, browser):** as HR — 48 total, Page 1→2 slices a different page server-side
+(loading between), "Page 1 of 6"; search "aarav" → "3 total"/3 rows; select-all → "8 selected" bulk bar
+(Export/Deactivate/Clear) + 8 row ⋯; sidebar shows Employees + Command center. As **Team Lead**
+(lead@) — roster **read-only** (0 checkboxes, 0 ⋯, no Add employee), Employees in nav, Command center
+hidden. As **employee** — `/employees` → **full-page 404** (roster denied). `tsc -b` + `eslint` pass.
+
+---
+
+## ESS cluster — My Profile / My Attendance / My Leave / Notifications (2026-07-25)
+
+Four employee-self-service screens (design: `My Profile` / `My Attendance` / `My Leave` /
+`Notifications.dc.html`), **all roles**, in a new **"My workspace"** sidebar group (unrestricted) +
+command-palette entries + routes (`/me/profile`, `/me/attendance`, `/me/leave`, `/notifications`).
+Each reads the current persona (resolveUser via `useAuth`) for what it carries and uses **flagged demo
+data** for the rest. No `ui/` changes. **Assets: none** (inline Lucide icons; no new deps).
+
+- **My Profile** (`features/my-profile`) — `PageHeader` as the identity header (avatar-initials icon +
+  name + `id`/status badges + `title · department` description + Personal/Contact/Documents tabs), a
+  dept/manager meta strip, per-tab field cards, a "Bank — Coming later" dashed card, and a Documents
+  `DataViewList`. Edit → toast (the design's per-field HR-approval workflow is stubbed).
+- **My Attendance** (`features/my-attendance`) — `PageHeader` (+ persona `checkedInAt` in the subtitle),
+  4 stat cards (`SkeletonKpis` loading), and a daily-log `DataViewList` (per-day status pill, LATE badge,
+  punch in/out, worked-hours bar). Calendar-grid view + day-detail drawer + regularisation form deferred.
+- **My Leave** (`features/my-leave`) — `PageHeader`, 3 balance **`DonutChart`** rings (`SkeletonKpis`
+  loading) whose "N left" centre is the persona's `leaveBalance.{annual,sick,casual}`, a request form
+  (Select/date/Switch/Textarea + live duration + client validation), and a history `DataViewList` with
+  status chips + Cancel. Cancel is a direct action + toast (no `ui/alert-dialog` primitive → the design's
+  confirm dialog is simplified).
+- **Notifications** (`features/notifications`) — `PageHeader` (unread count + "Mark all read") + filter
+  tabs + a grouped (Today/Yesterday/Earlier) `DataViewList` of kind-colored rows with unread dots.
+  **Role-aware:** plain employees don't see the Approvals tab or any `approval` items (uses persona role).
+
+### ⚠ Data the persona does NOT carry (flagged, using demo data)
+
+The persona (`name, email, id, title, department, leaveBalance{annual,sick,casual}, team{name,size},
+attendance{checkedInAt,monthPct,status}`) covers only a thin slice. Every ESS screen needs backend data
+it lacks — demo stand-ins are used and marked in each feature's `data.ts`:
+
+- **My Profile** — DOB, gender, marital status, blood group, nationality, all contact fields, manager,
+  employment type, join date, documents list, and the **pending-change approval ledger**. (Persona has
+  only name/email/id/title/department.)
+- **My Attendance** — the **day-by-day ledger**: per-day status, punch logs, worked minutes, late marks,
+  shift window, regularisation state. (Persona has one snapshot: `checkedInAt`/`status`; `monthPct` isn't
+  even used by the screen.)
+- **My Leave** — the balance **ledger** (opening/accrued/used — derived here from the single `available`
+  number) and the **request history** entirely. (Persona gives only one available number per type.)
+- **Notifications** — the **entire feed**, unread counts, read state. The design's own CLAUDE.md notes the
+  API spec defines **no notifications endpoint/schema** at all. Only `role` (persona) is real, for filtering.
+- `team` (persona) is **unused** by all four screens.
+
+Each `data.ts` has a `fetch`-shaped or exported demo dataset that a real endpoint replaces
+(`GET /me`+`/documents`, `/attendance/days`+`/punch_logs`, `/leave/balances/{id}/ledger`+`/leave/requests`,
+`GET /notifications`).
+
+**Verified (2026-07-25, browser):** My Leave rings show the HR persona's **12 / 8 / 5 left** + form +
+history; My Attendance subtitle "checked in today at **09:15**" (persona) + stat cards (12/2/1/1) + daily
+log with statuses/LATE/times/worked-bars; My Profile header (PN · Priya Nair · ITL-0042 · Active · HR
+Manager · People Ops) + tabs + fields; Notifications grouped list with unread dots — and as **employee**
+the Approvals tab + approval items are hidden while leave/system remain, with the "My workspace" group
+visible to all roles. `tsc -b` + `eslint` pass.
+
+---
+
+## Confirm dialog — the standard destructive-action confirm (2026-07-25)
+
+Added shadcn's `alert-dialog` primitive (`npx shadcn add alert-dialog` — declined its offer to overwrite
+`button.tsx`, keeping our `sso` variant) and built a **reusable Confirm dialog** on top, to the States &
+Components spec ("Confirm AlertDialog"). Replaces the ad-hoc "Cancel → toast" from the ESS pass and is now
+the standard for destructive actions.
+
+- **`components/confirm/use-confirm.ts`** — `ConfirmContext` + `useConfirm()` + `ConfirmOptions` type.
+- **`components/confirm/confirm-provider.tsx`** — `ConfirmProvider` renders ONE dialog and exposes an
+  imperative `confirm({ title, description, confirmLabel, cancelLabel, tone, icon, onConfirm })`. Wired
+  once into `AppProviders` (inside TooltipProvider). Any call site triggers it in one line, incl. from a
+  row ⋯ menu item or a bulk button.
+- **Spec build:** 430px card panel (`max-w-[430px]` — had to override the primitive's higher-specificity
+  `data-[size=default]:sm:max-w-sm` with the same variant stack for tailwind-merge to drop it), r-15,
+  shadow-lg; per-severity tinted icon tile (`destructive` = destructive-subtle, `warning` =
+  warning-subtle); destructive/warning confirm button. **Busy state:** while `onConfirm` runs, the confirm
+  button shows a spinner + "Working…" (disabled, `aria-busy`, `cursor-wait`) and **Esc/dismiss is blocked**
+  (the `onOpenChange` guard). Closes when `onConfirm` resolves. Stub call sites `await` ~700ms to exercise
+  the busy state; real latency drives it naturally.
+
+**Wired at:** My Leave **Cancel** ("Cancel this leave? … N days return to your balance" · Keep it / Cancel
+leave) and Employees **Deactivate** (row ⋯ + bulk — "Deactivate {name/N}?"). Both run their action inside
+`onConfirm`.
+
+**CLAUDE.md clarified:** installing NEW shadcn primitives via `npx shadcn add` is always allowed (decline
+any overwrite of an existing file); the `ui/` rule is only about **hand-editing existing** primitives
+(except adding a cva variant) — restyle/extend by wrapping in an app-level component instead.
+
+**Verified (2026-07-25, browser):** My Leave Cancel → dialog (title/desc/Keep-it/Cancel-leave, `maxWidth`
+computed 430px, r-15) → confirm shows **"Working…" (disabled, aria-busy)** → row flips to **Cancelled** +
+toast → dialog closes, page stays interactive (re-opens fine). Employees row ⋯ → Deactivate → "Deactivate
+Aarav Nair? / They lose access immediately…" with the same busy flow. `tsc -b` + `eslint` pass.
+(Note: in the CDP automation browser the dialog renders at `scale(0.95)` — the Radix enter `zoom-in-95`
+doesn't settle there; `max-width` is correctly 430px. Same benign artifact on all the app's Radix dialogs.)

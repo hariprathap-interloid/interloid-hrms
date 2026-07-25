@@ -1,5 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import { Blocks, LayoutDashboard, Layers, Palette, Radar, Table2 } from 'lucide-react'
+import {
+  Bell,
+  Blocks,
+  CalendarClock,
+  CalendarDays,
+  CircleUser,
+  LayoutDashboard,
+  Layers,
+  Palette,
+  Radar,
+  Table2,
+  Users,
+} from 'lucide-react'
 import {
   CommandDialog,
   CommandEmpty,
@@ -17,6 +29,11 @@ import { paths } from '@/config/paths'
 const SCREENS = [
   { label: 'Dashboard', icon: LayoutDashboard, href: paths.dashboard.getHref(), shortcut: 'G D' },
   { label: 'Command center', icon: Radar, href: paths.commandCenter.getHref() },
+  { label: 'Employees', icon: Users, href: paths.employees.getHref() },
+  { label: 'My attendance', icon: CalendarClock, href: paths.meAttendance.getHref() },
+  { label: 'My leave', icon: CalendarDays, href: paths.meLeave.getHref() },
+  { label: 'My profile', icon: CircleUser, href: paths.meProfile.getHref() },
+  { label: 'Notifications', icon: Bell, href: paths.notifications.getHref() },
   { label: 'Design tokens', icon: Palette, href: paths.devTokens.getHref() },
   { label: 'Components', icon: Blocks, href: paths.devComponents.getHref() },
   { label: 'Data-view states', icon: Layers, href: paths.devStates.getHref() },

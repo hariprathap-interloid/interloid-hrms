@@ -11,6 +11,26 @@ export const paths = {
     path: '/command-center',
     getHref: () => '/command-center',
   },
+  employees: {
+    path: '/employees',
+    getHref: () => '/employees',
+  },
+  meProfile: {
+    path: '/me/profile',
+    getHref: () => '/me/profile',
+  },
+  meAttendance: {
+    path: '/me/attendance',
+    getHref: () => '/me/attendance',
+  },
+  meLeave: {
+    path: '/me/leave',
+    getHref: () => '/me/leave',
+  },
+  notifications: {
+    path: '/notifications',
+    getHref: () => '/notifications',
+  },
   login: {
     path: '/login',
     getHref: () => '/login',
