@@ -1061,3 +1061,64 @@ was populated). Now **both branches are real** — no role sees a placeholder at
 hidden**; Leave-balance KPI click → `/me/leave`. lead@ → personal dashboard, rings **10/7/5** (persona).
 hr@ → still the **org** dashboard (Headcount, charts, approvals) — not the personal one. No "coming soon"
 for any role. `tsc -b` + `eslint` pass.
+
+---
+
+## My Attendance — rebuilt to full design fidelity (2026-07-25)
+
+Prior pass shipped only the design's _List view + stat cards_; the calendar grid and day-detail drawer
+(the two richest pieces) were skipped. This rebuild closes every gap that wasn't genuinely data-blocked,
+and stubs the two that were — shaped like the real endpoints — so they're complete-pending-API, not skipped.
+
+**Built (was skipped / simplified):**
+
+- **Calendar grid** (`CalendarGrid`/`DayCell`) — Mon-start month grid off the existing `getMonth()` data.
+  Per-day cell: status accent bar, day number, LATE badge, work-day `firstIn–lastOut` + worked-hours
+  progress bar (worked/540min) + label, off-day status dot+label, **today ring** (`TODAY_ISO`), pending-
+  regularisation dot. Cells are buttons → open the drawer.
+- **Calendar/List view toggle** (`ViewToggle`) + **month stepper** (`MonthStepper`, `‹ June 2026 ›`),
+  both in the PageHeader `actions` slot.
+- **Status legend** (`Legend`) — the 6 statuses from `STATUS_META`. Split `on_leave` off `partial`'s amber
+  (now brand/indigo) so the legend reads distinctly.
+- **Day-detail drawer** (`DayDetail` on `ui/sheet`) — header (`fullDate` · dow · IST), status + LATE/pending
+  badges, 2×2 tiles (First in / Last out / Worked / **Shift 09:30–18:30**, static as the design shows it),
+  **punch log**, and a **regularisation form** (Proposed in/out + Reason → Submit; busy→success + toast, or
+  the "awaiting HR approval" variant when a request is already open; non-applicable on off/holiday days).
+- **Error state** ("Couldn't load your attendance" + `503 · service_unavailable` + Retry) and the
+  **empty-state Refresh CTA** — wired to a simulated month fetch (June = populated; the previous month fails
+  once so the error+retry path is reachable, then recovers to empty; other months are empty).
+
+**Data-blocked pieces — now stubbed to the endpoint shape (`./data.ts`), UI built against them:**
+
+- `AttendanceDay.punches: Punch[]` (`{type,time,device}`) → GET /attendance/days/:iso/punches.
+- `AttendanceDay.regularisationPending: boolean` → the day's open regularisation request (drives the list
+  "Reg. pending" pill + the drawer's awaiting-approval variant).
+- `getMonth()` extended from days 1–20 to the **full month** (30 days). Swapping in the API = replacing
+  `getMonth()`; the UI already renders both new fields.
+
+**Two non-design additions — resolved (asked, both "drop to match design"):**
+
+- Stat-card **icon tiles** → dropped; cards are now plain number + label, 1:1 with the design.
+- Top-level **"Request correction"** action → dropped; regularisation lives in the day drawer, as designed.
+
+**Verified (2026-07-25, browser, employee persona):** calendar renders full June Mon-start with per-day
+times/bars, LATE on 2/9/23, Absent 5, On-leave 12, Holiday 16, Partial 18 (+pending dot), **today ring on
+30**; stat cards 19/3/1/1; 6-chip legend. Drawer (day 18): Partial + Reg. pending, 2×2 tiles, punch log,
+"awaiting HR approval". Drawer (day 3): 4-punch log + form → filled reason → "Submitting…" → "Request sent
+to HR" + toast. Stepper: May → error → Retry → empty; July → empty + Refresh; back to June → populated.
+List view: 30 rows, "Reg. pending" pill on 18. Employee dashboard unaffected (snapshot now 19 present, full
+month). `tsc -b` + `eslint src/features/my-attendance/` both pass.
+
+---
+
+## Audit backlog — data-consistency (open, do NOT fix standalone)
+
+- **Dashboard vs. Attendance month figure.** The Company Dashboard (employee branch) and the My Attendance
+  page currently read the **same full-month** number from `summarize(getMonth())`. Per design intent they
+  should differ: the **dashboard = month-to-date** ("so far this month", through today = `TODAY_ISO`
+  2026-06-30), the **attendance page = the full month**. Right now both show the full-month total (e.g.
+  Present 19). Resolve this **inside the fidelity audit's data-consistency check**, not as a one-off — the
+  fix likely belongs at the shared data seam (`my-attendance/data.ts` `summarize`, or a `summarizeToDate`
+  variant consumed by `dashboard/employee-data.ts` + `employee-dashboard.tsx`), so the audit should decide
+  the seam rather than patching one screen. Touches: `features/dashboard/employee-data.ts`,
+  `features/dashboard/employee-dashboard.tsx` (AttendanceSnapshotCard), `features/my-attendance/data.ts`.
