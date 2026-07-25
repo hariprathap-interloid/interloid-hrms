@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react'
-import { Loader2, TriangleAlert } from 'lucide-react'
+import { CircleAlert, Loader2, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -33,19 +33,30 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [options, setOptions] = useState<ConfirmOptions | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const confirm = useCallback<ConfirmFn>((next) => {
     setOptions(next)
     setBusy(false)
+    setError(null)
     setOpen(true)
   }, [])
 
   const runConfirm = async () => {
     if (!options) return
+    setBusy(true)
+    setError(null)
     try {
-      setBusy(true)
       await options.onConfirm()
       setOpen(false)
+    } catch (caught) {
+      // A failed action must NOT hang on "Working…". Surface the reason and keep
+      // the dialog usable — the busy state clears (finally) so retry/cancel work.
+      setError(
+        caught instanceof Error && caught.message
+          ? caught.message
+          : 'Something went wrong. Please try again.',
+      )
     } finally {
       setBusy(false)
     }
@@ -54,6 +65,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   // Esc / outside-close is blocked while the action is processing (States spec).
   const onOpenChange = (nextOpen: boolean) => {
     if (busy) return
+    if (!nextOpen) setError(null)
     setOpen(nextOpen)
   }
 
@@ -84,6 +96,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               )}
             </div>
           </div>
+          {error && (
+            <div className="iws-shake border-destructive/40 bg-destructive-subtle text-destructive-subtle-foreground mx-5 -mt-1 mb-4 flex items-start gap-2 rounded-[10px] border px-3 py-2.5 text-[12.5px]">
+              <CircleAlert className="mt-px size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
           <AlertDialogFooter className="mx-0 mb-0 border-t-0 bg-transparent px-5 pt-0 pb-5">
             <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
               {options?.cancelLabel ?? 'Cancel'}

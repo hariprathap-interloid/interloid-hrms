@@ -1006,6 +1006,12 @@ the standard for destructive actions.
   button shows a spinner + "Working…" (disabled, `aria-busy`, `cursor-wait`) and **Esc/dismiss is blocked**
   (the `onOpenChange` guard). Closes when `onConfirm` resolves. Stub call sites `await` ~700ms to exercise
   the busy state; real latency drives it naturally.
+- **Rejection handling (real APIs fail):** `runConfirm` wraps `onConfirm` in try/**catch**/finally. On a
+  thrown/rejected action the `finally` clears busy (never stuck on "Working…"), the dialog **stays open**
+  (no `setOpen(false)` in the catch) so Esc/Cancel re-enable, and the error **surfaces inline** — a
+  destructive `iws-shake` panel showing the `Error.message` (or a generic fallback). The confirm button
+  reverts to its label so the user can retry. Error clears on reopen / dismiss. Without this the promise
+  would become an unhandled rejection and never reach the user.
 
 **Wired at:** My Leave **Cancel** ("Cancel this leave? … N days return to your balance" · Keep it / Cancel
 leave) and Employees **Deactivate** (row ⋯ + bulk — "Deactivate {name/N}?"). Both run their action inside
@@ -1021,3 +1027,37 @@ toast → dialog closes, page stays interactive (re-opens fine). Employees row �
 Aarav Nair? / They lose access immediately…" with the same busy flow. `tsc -b` + `eslint` pass.
 (Note: in the CDP automation browser the dialog renders at `scale(0.95)` — the Radix enter `zoom-in-95`
 doesn't settle there; `max-width` is correctly 430px. Same benign artifact on all the app's Radix dialogs.)
+
+**Reject path verified (2026-07-25):** temporarily made My Leave's Cancel `onConfirm` throw
+(`409 already processed`) → mid-action showed **"Working…" (disabled)**; after the throw the dialog stayed
+open, busy **cleared** ("Cancel leave" restored), **both buttons re-enabled**, and the error surfaced
+inline ("Cancellation rejected — request already processed (409)."). "Keep it" then dismissed cleanly.
+Reverted the throw; success path intact.
+
+---
+
+## Company Dashboard — Employee branch filled; role seam complete (2026-07-25)
+
+The dashboard's Employee/Lead landing was a "coming soon" stub (the role seam existed but only HR/Admin
+was populated). Now **both branches are real** — no role sees a placeholder at `/dashboard`.
+
+- **`features/dashboard/employee-dashboard.tsx`** — `EmployeeDashboard`, a persona-driven personal
+  summary reusing the HR branch's building blocks (**PageHeader** greeting + status badges, **KpiCard**
+  row, **DonutChart** rings, **DataViewList**). Sections: 4 KPI cards (Leave balance / Attendance / Present
+  days / Pending — each **deep-links** into the matching ESS screen via `KpiCard.onClick`), a **Leave
+  balance** card (3 `DonutChart` rings) → My Leave, an **Attendance snapshot** (month % + present/late/
+  absent + checked-in) → My Attendance, and **Recent notifications** (`DataViewList`, approvals filtered
+  out for `employee`) → Notifications. Every card header carries a "view" link into the ESS screen.
+- **`features/dashboard/employee-data.ts`** — `buildEmployeeKpis(user)`: reads the persona
+  (`leaveBalance`/`attendance`) and the **same demo sources the ESS screens use** (`buildBalances`,
+  `getMonth`/`summarize`, `DEMO_HISTORY`), so the dashboard and My Leave / My Attendance agree.
+- **`dashboard-screen.tsx`** routes `employee`/`lead` → `EmployeeDashboard`, `hr`/`admin` →
+  `DashboardContent` (org). `getDashboardData` now runs only for `hr`; its Employee/Lead null arms are a
+  defensive fallback (documented in `data.ts`). Lead uses the personal view for now — a dedicated
+  team-focused Lead variant (design's isLead) is still a future fill-in.
+
+**Verified (2026-07-25, browser, all roles):** employee@ → "Good morning, Arjun", rings **8/6/4.5**
+(persona), Attendance 96%, Present 12/Late 2/Absent 1, checked-in 09:28, notifications with **approvals
+hidden**; Leave-balance KPI click → `/me/leave`. lead@ → personal dashboard, rings **10/7/5** (persona).
+hr@ → still the **org** dashboard (Headcount, charts, approvals) — not the personal one. No "coming soon"
+for any role. `tsc -b` + `eslint` pass.

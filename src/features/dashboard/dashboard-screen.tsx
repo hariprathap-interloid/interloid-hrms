@@ -18,6 +18,7 @@ import { useRole } from '@/features/auth/use-role'
 import { cn } from '@/lib/utils'
 import { AiInsightCard } from './components/ai-insight-card'
 import { KpiCard } from './components/kpi-card'
+import { EmployeeDashboard } from './employee-dashboard'
 import {
   getDashboardData,
   type ActivityItem,
@@ -60,6 +61,9 @@ export function DashboardScreen() {
     timer.current = setTimeout(() => setStatus('populated'), 600)
     return () => clearTimeout(timer.current)
   }, [])
+
+  // Employee/Lead see their personal summary; HR/Admin see the org dashboard.
+  if (role === 'employee' || role === 'lead') return <EmployeeDashboard status={status} />
 
   const data = getDashboardData(role)
   if (!data) return <RoleComingSoon role={role} />

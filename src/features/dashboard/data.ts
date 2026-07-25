@@ -292,9 +292,11 @@ const hrData: DashboardData = {
 }
 
 /**
- * Role → dashboard content. HR/Admin is complete; Employee and Team Lead are
- * deliberately unpopulated for this pass (the design defines them — lift their
- * KPIs/charts/queues here to light them up; the screen needs no changes).
+ * Org dashboard content for HR/Admin (this shape — KPIs/charts/approvals). The
+ * Employee/Lead landing is a different, persona-driven summary rendered by
+ * `EmployeeDashboard` (employee-dashboard.tsx); the screen routes those roles
+ * there before calling this, so it only ever runs for `hr`. The null arms stay
+ * as a defensive fallback.
  */
 export function getDashboardData(role: DashboardRole): DashboardData | null {
   switch (role) {
@@ -302,7 +304,6 @@ export function getDashboardData(role: DashboardRole): DashboardData | null {
       return hrData
     case 'employee':
     case 'lead':
-      // TODO(role): populate from Company Dashboard.dc.html isEmp / isLead branches.
       return null
     default:
       return null
