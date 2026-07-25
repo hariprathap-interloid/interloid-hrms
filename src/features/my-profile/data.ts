@@ -35,6 +35,22 @@ export interface ProfileData {
   documents: EmployeeDoc[]
 }
 
+/**
+ * A submitted profile-field edit awaiting HR review. Stub shaped like the real
+ * `profile_change_requests` endpoint (POST creates one; a review approves/rejects
+ * it). Today these live in local screen state — the workflow needs no backend.
+ */
+export interface ProfileChangeRequest {
+  id: string
+  /** Field id — its label, which is unique across the profile. */
+  field: string
+  from: string
+  to: string
+  status: 'pending' | 'approved' | 'rejected'
+  /** ISO timestamp; the UI shows "awaiting HR review", the shape carries the time. */
+  submittedAt: string
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const ADDRESSES = [
   { address: '42 MG Road, Indiranagar', city: 'Bengaluru 560038' },

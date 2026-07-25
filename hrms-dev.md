@@ -1161,3 +1161,37 @@ outright — false rationales rewritten, accurate ⚠ data-blocked FLAGs left in
   unreachable for every role — flagged for a later cleanup pass.
 
 `tsc -b` + `eslint` on the touched features pass.
+
+---
+
+## Tier 1 stale-deferral pass (2026-07-25)
+
+Built the audit's Tier-1 items — deferrals that were mislabeled data-blocked but are local-state buildable
+(the My Attendance pattern). Each verified in-browser against the design before moving on.
+
+- **Dead code removed.** `RoleComingSoon` in `dashboard-screen.tsx` was unreachable (employee/lead branch to
+  EmployeeDashboard; hr/admin always have data). Deleted; the `if (!data)` guard is now a plain `return null`
+  type-narrowing fallback.
+
+- **1.1 My Profile edit → submit → "Pending HR approval".** `EditableFieldCard` — per-card Edit → inputs →
+  Cancel / "Submit for review"; submitting opens `ProfileChangeRequest`s (local state) that render a per-field
+  "Pending approval" pill + proposed value + a summary banner. Stub `ProfileChangeRequest` in `data.ts` shaped
+  like `profile_change_requests` (id/field/from/to/status/submittedAt). Verified: edit Blood group → banner
+  "1 change awaiting HR approval", pill, "→ A- · awaiting HR review", toast.
+
+- **1.2 Documents upload dropzone.** Dashed drag/drop + browse (hidden file input), simulated per-file
+  progress bar, then the file moves into the list dated today. Local state; interval timers cleared on unmount.
+  Verified: dropped a 320 KB PDF → progress → "Payslip June.pdf · 25 Jul 2026" at the top of the list.
+
+- **1.4 error state + Retry — My Leave & Notifications.** Wired the unused `DataView` `error` slot + `ErrorState`
+  (503 · service_unavailable + Retry), reachable via `?state=error` (the same preview-param the reset-password
+  screen uses); Retry recovers to the populated list. Balances still render under the leave error (design: the
+  error is the history panel only). Verified both: error → Retry → recovered.
+
+- **1.7 Employees no-access.** The directory is HR/Admin only. A non-manager that _reaches_ the route (Team
+  Lead — its people view is Team Overview) now gets `NoAccessState` instead of the read-only roster; employees
+  stay 404'd by the route RoleGate. This supersedes the earlier "lead sees read-only roster" behavior — flag if
+  Lead was meant to keep roster view. Verified: HR → roster (+ Add employee), Lead → permission panel (no table,
+  not 404), Employee → 404.
+
+`tsc -b` clean; `eslint .` clean (3 pre-existing `ui/sidebar.tsx` warnings only). No Tier 2 work started.

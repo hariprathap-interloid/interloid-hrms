@@ -14,7 +14,12 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@/components/data-table'
-import { EmptyState, type DataViewStatus } from '@/components/data-view'
+import {
+  DataViewList,
+  EmptyState,
+  NoAccessState,
+  type DataViewStatus,
+} from '@/components/data-view'
 import { useConfirm } from '@/components/confirm/use-confirm'
 import { useRole } from '@/features/auth/use-role'
 import {
@@ -31,8 +36,10 @@ import {
  * Promotes the /dev/table demo into a real shell route: PageHeader + FilterBar +
  * DataTable + cells, driving **controlled / server-side** pagination + sorting +
  * filtering through the `fetchEmployees` seam (a real GET /employees plugs in
- * there). Row actions / bulk ops / selection are gated by role via
- * `permitActions` — on for HR/Admin, off for view-only roles (read-only roster).
+ * there). The full directory is HR/Admin only: employees are 404'd by the route's
+ * RoleGate, and a non-manager role that still reaches this route (Team Lead — its
+ * people view is Team Overview) gets the no-access permission state, not the
+ * roster. Row actions / bulk ops / selection are gated by `permitActions`.
  * ------------------------------------------------------------------------- */
 
 const PAGE_SIZE = 8
@@ -53,8 +60,9 @@ function asArray(value: string | string[] | undefined): string[] | undefined {
 
 export function EmployeesScreen() {
   const role = useRole()
-  // HR/Admin manage the roster; other roles get a read-only view (design:
-  // "data stays visible, affordances the role lacks are stripped").
+  // The directory is HR/Admin only. `canManage` also gates viewing here: a role
+  // that reaches this route but isn't HR/Admin (Team Lead) gets the no-access
+  // state below instead of the roster.
   const canManage = role === 'hr' || role === 'admin'
   const confirm = useConfirm()
 
@@ -170,6 +178,25 @@ export function EmployeesScreen() {
     ],
     [],
   )
+
+  // Reached the route but not permitted to view the directory (Team Lead): show
+  // the permission state, not the roster. (Employees never get here — 404'd.)
+  if (!canManage) {
+    return (
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6 lg:p-10">
+        <PageHeader
+          title="Employees"
+          description="Everyone in the Interloid workforce directory."
+        />
+        <DataViewList className="bg-card">
+          <NoAccessState
+            title="You don’t have access to the directory"
+            description="The full employee directory is available to HR and Admins only."
+          />
+        </DataViewList>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6 lg:p-10">

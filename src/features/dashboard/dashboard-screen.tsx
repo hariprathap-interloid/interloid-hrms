@@ -66,7 +66,9 @@ export function DashboardScreen() {
   if (role === 'employee' || role === 'lead') return <EmployeeDashboard status={status} />
 
   const data = getDashboardData(role)
-  if (!data) return <RoleComingSoon role={role} />
+  // role is 'hr' here (employee/lead branched above, admin mapped to hr), so data
+  // is always populated; the null check is a defensive type-narrowing fallback.
+  if (!data) return null
   return <DashboardContent data={data} status={status} />
 }
 
@@ -286,19 +288,5 @@ function ActivityRow({ item }: { item: ActivityItem }) {
         <div className="text-muted-foreground/80 mt-0.5 text-[11px]">{item.time}</div>
       </div>
     </div>
-  )
-}
-
-function RoleComingSoon({ role }: { role: DashboardRole }) {
-  return (
-    <Shell>
-      <PageHeader title="Dashboard" description="Your workspace overview" />
-      <DataViewList className="bg-card">
-        <EmptyState
-          title="Dashboard coming soon for your role"
-          description={`The ${role} dashboard view is being built. The HR/Admin view is available today.`}
-        />
-      </DataViewList>
-    </Shell>
   )
 }

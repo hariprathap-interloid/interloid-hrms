@@ -1,13 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bell, CalendarDays, CheckCheck, ClipboardCheck, type LucideIcon } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import {
+  Bell,
+  CalendarDays,
+  CheckCheck,
+  ClipboardCheck,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import {
   DataView,
   DataViewList,
   EmptyState,
+  ErrorState,
   SkeletonRows,
   type DataViewStatus,
 } from '@/components/data-view'
+import { Button } from '@/components/ui/button'
 import { useRole } from '@/features/auth/use-role'
 import { cn } from '@/lib/utils'
 import {
@@ -37,15 +47,28 @@ export function NotificationsScreen() {
   const role = useRole()
   const canSeeApprovals = role !== 'employee'
 
+  const [searchParams] = useSearchParams()
+  const forceError = searchParams.get('state') === 'error'
   const [items, setItems] = useState<Notification[]>(DEMO_NOTIFICATIONS)
   const [tab, setTab] = useState('all')
   const [status, setStatus] = useState<DataViewStatus>('loading')
+  const [reloadKey, setReloadKey] = useState(0)
+  const [recovered, setRecovered] = useState(false)
 
   useEffect(() => {
-    // Simulate the initial fetch so SkeletonRows shows.
-    const id = setTimeout(() => setStatus('populated'), 500)
+    // Simulated feed fetch. `?state=error` forces the failure once so the
+    // error+Retry path is reachable; Retry then recovers to the list.
+    const id = setTimeout(() => {
+      setStatus(forceError && !recovered ? 'error' : 'populated')
+    }, 500)
     return () => clearTimeout(id)
-  }, [])
+  }, [forceError, recovered, reloadKey])
+
+  const retryFeed = () => {
+    setRecovered(true)
+    setStatus('loading')
+    setReloadKey((key) => key + 1)
+  }
 
   // Employees never see approval items at all.
   const visible = useMemo(
@@ -79,7 +102,13 @@ export function NotificationsScreen() {
   ]
 
   const viewStatus: DataViewStatus =
-    status === 'loading' ? 'loading' : filtered.length > 0 ? 'populated' : 'empty'
+    status === 'loading'
+      ? 'loading'
+      : status === 'error'
+        ? 'error'
+        : filtered.length > 0
+          ? 'populated'
+          : 'empty'
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 p-6 lg:p-10">
@@ -110,6 +139,19 @@ export function NotificationsScreen() {
               icon={<CheckCheck />}
               title="You're all caught up"
               description="No notifications here right now."
+            />
+          }
+          error={
+            <ErrorState
+              title="Couldn't load your notifications"
+              description="The notifications service didn't respond. Check your connection and try again."
+              code="503 · service_unavailable"
+              action={
+                <Button variant="outline" onClick={retryFeed}>
+                  <RefreshCw />
+                  Retry
+                </Button>
+              }
             />
           }
         >

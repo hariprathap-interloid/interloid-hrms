@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/page-header'
 import { DonutChart } from '@/components/charts'
@@ -6,6 +8,7 @@ import {
   DataView,
   DataViewList,
   EmptyState,
+  ErrorState,
   SkeletonKpis,
   SkeletonRows,
   type DataViewStatus,
@@ -54,13 +57,27 @@ export function MyLeaveScreen() {
   const confirm = useConfirm()
   const balances = useMemo(() => (user ? buildBalances(user.leaveBalance) : []), [user])
 
+  const [searchParams] = useSearchParams()
+  const forceError = searchParams.get('state') === 'error'
   const [status, setStatus] = useState<DataViewStatus>('loading')
   const [history, setHistory] = useState<LeaveRequest[]>(DEMO_HISTORY)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [recovered, setRecovered] = useState(false)
 
   useEffect(() => {
-    const id = setTimeout(() => setStatus('populated'), 500)
+    // Simulated history fetch. `?state=error` forces the failure once so the
+    // error+Retry path is reachable; Retry then recovers to the populated list.
+    const id = setTimeout(() => {
+      setStatus(forceError && !recovered ? 'error' : 'populated')
+    }, 500)
     return () => clearTimeout(id)
-  }, [])
+  }, [forceError, recovered, reloadKey])
+
+  const retryHistory = () => {
+    setRecovered(true)
+    setStatus('loading')
+    setReloadKey((key) => key + 1)
+  }
 
   const requestCancel = (request: LeaveRequest) => {
     confirm({
@@ -96,7 +113,13 @@ export function MyLeaveScreen() {
   }
 
   const viewStatus: DataViewStatus =
-    status === 'loading' ? 'loading' : history.length > 0 ? 'populated' : 'empty'
+    status === 'loading'
+      ? 'loading'
+      : status === 'error'
+        ? 'error'
+        : history.length > 0
+          ? 'populated'
+          : 'empty'
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-6 lg:p-10">
@@ -128,6 +151,19 @@ export function MyLeaveScreen() {
                 <EmptyState
                   title="No requests yet"
                   description="Apply for leave and it will show up here."
+                />
+              }
+              error={
+                <ErrorState
+                  title="Couldn't load your leave history"
+                  description="The leave service didn't respond. Check your connection and try again."
+                  code="503 · service_unavailable"
+                  action={
+                    <Button variant="outline" onClick={retryHistory}>
+                      <RefreshCw />
+                      Retry
+                    </Button>
+                  }
                 />
               }
             >
