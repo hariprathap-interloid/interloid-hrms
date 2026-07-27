@@ -12,6 +12,7 @@ import {
   Palette,
   Radar,
   ScrollText,
+  Settings2,
   Table2,
   Users,
 } from 'lucide-react'
@@ -58,6 +59,15 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Employees',
         icon: Users,
         href: paths.employees.getHref(),
+        roles: ['hr', 'admin'],
+      },
+      {
+        // "Roles: HR (partial …), Admin (full …)" — both see the item; the
+        // screen locks the Admin-only Org settings section for HR.
+        key: 'configuration',
+        label: 'Configuration',
+        icon: Settings2,
+        href: paths.configuration.getHref(),
         roles: ['hr', 'admin'],
       },
       {

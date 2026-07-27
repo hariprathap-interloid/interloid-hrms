@@ -56,6 +56,11 @@ export const router = createBrowserRouter([
         HydrateFallback: HomeLoadingSkeleton,
       },
       {
+        path: paths.configuration.path,
+        lazy: lazy(() => import('./pages/configuration')),
+        HydrateFallback: HomeLoadingSkeleton,
+      },
+      {
         path: paths.auditLog.path,
         lazy: lazy(() => import('./pages/audit-log')),
         HydrateFallback: HomeLoadingSkeleton,

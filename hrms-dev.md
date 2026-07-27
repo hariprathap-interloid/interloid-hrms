@@ -1328,9 +1328,9 @@ Notifications clock/solid-unread/empty-CTA; My Profile Full name + Status-in-gri
 | `/admin`         | **"Roles: Admin only."**                                                                        | `Manage users, roles & integration settings \| — \| — \| — \| ✓`                     |
 
 Audit Log and Configuration both admit HR in a _reduced_ form — the manifest's **permission-limited** case
-("hide actions the role lacks"), applied **inside** the screen. Only Admin Console is a hard single-role gate,
-and its design renders an in-screen **"Restricted area … 403 · forbidden"** panel for non-Admins. Neither is the
-forbidden-URL 404 rule; that still governs roles with _no_ capability at all (Employee / Team Lead here).
+("hide actions the role lacks"), applied **inside** the screen. That is not the forbidden-URL 404 rule; the 404
+still governs roles with _no_ capability at all (Employee / Team Lead here). Only Admin Console is a hard
+single-role gate — see the 2026-07-27 note below, which corrects an earlier reading of its 403 panel.
 
 **None of the three renders a KPI row** (checked each `.dc.html` directly): Audit Log = header → scope banner →
 filter toolbar → table; Configuration = header → 7-section sub-nav → form or table; Admin Console = header →
@@ -1443,3 +1443,91 @@ Verified in-browser in **both themes**: CC anomaly tile / AI chips / Investigate
 violet, and Audit Log showing three distinct source tints (UI indigo · System violet · Integration blue).
 `/dev/tokens` renders all four violet swatches with correct per-theme values. `tsc -b` clean; `eslint` clean
 (3 pre-existing `ui/sidebar.tsx` warnings only).
+
+---
+
+## /admin 403 panel — checked against the manifest, NOT a sanctioned exception (2026-07-27)
+
+Checked whether `Admin Console.dc.html`'s in-screen **"Restricted area … 403 · forbidden"** panel is a
+deliberate manifest-level exception to the global forbidden-URL rule. **It is not.** Default stands: **404.**
+
+**The manifest's global rule (§Required UX patterns), quoted verbatim:**
+
+> "Data views always cover: loading (skeleton) · empty (icon + one-line + primary action) · error (retry) ·
+> populated · permission-limited (hide actions the role lacks; **forbidden URL → 'Not found'**)."
+
+**The manifest's entire Admin Console entry, quoted verbatim:**
+
+> "**Admin Console** `/admin` · entity: **user / role + integration settings**
+>
+> - Reads: `GET /roles`; `GET /employees` (as user list); `GET /attendance/sync/status`.
+> - Mutations: `POST /attendance/sync`. Roles: **Admin only**.
+> - ⚠ Gaps: **role assignment** (`/roles` is read-only in Phase 1a — no user↔role write endpoint), **user
+>   deactivation as a user** (only `DELETE /employees/{id}` exists), and the **eTimeOffice connection config**
+>   (credentials/test-connection/schedule + unmapped-device-ID queue) have **no spec endpoints**."
+
+That is the complete entry — **no 403, no "Restricted area", no exception language anywhere.** The manifest
+never carves out `/admin`, and nothing else in it mentions a 403 surface.
+
+**The panel is standalone-demo scaffolding, not a routing spec.** In the `.dc.html`, `restricted: !isAdmin,
+allowed: isAdmin` is driven by the file's own **demo Role segmented control** (`seg('Role',[{l:'HR'},{l:'Admin'}])`)
+in the meta strip — the same scaffolding as its State and Width switchers, and that strip is `chromeDisplay:
+emb?'none':'flex'`, i.e. **hidden the moment the screen is embedded in the app shell**. Audit Log and
+Configuration carry the identical Role switcher; flipping theirs shows the scoped/partial variant. Admin Console
+has no reduced variant, so flipping its switcher had to show _something_ — that something is the 403 panel. It
+answers "what does this demo show when you toggle the role", not "what does the router do for a forbidden role".
+
+**Corroborated by the design system's own component contract** — `components/DataTable/DataTable.d.ts`:
+
+> "`\"forbidden\"` swaps the whole view for a 'Not found' guard (forbidden URL for the role)."
+
+So the shared primitive also routes forbidden → Not found, not → 403.
+
+**Conclusion: there is no sanctioned exception. `/admin` gets `RoleGate allow={['admin']}` with the 404
+fallback**, exactly like `/employees` and `/audit-log`. Corrects the earlier Admin-cluster note, which described
+the 403 panel as though the design specified it — it described the `.dc.html` accurately but wrongly implied
+manifest sanction. **Do not re-raise this**: the 403 panel is demo-only and is intentionally not built.
+
+---
+
+## Configuration `/configuration` — built, three-layer permission model (2026-07-27)
+
+Manifest roles, quoted: **"Roles: HR (partial — depts/shifts/leave types/holidays), Admin (full incl. org
+settings)."** Matrix: `Configure depts / shifts / leave types / holidays | — | — | Partial | ✓ (full)`.
+
+**Three permission layers, all agreeing** — this screen is the first to need all three:
+
+1. **nav-visibility** — sidebar item `roles: ['hr','admin']`
+2. **route gate** — `RoleGate allow={['hr','admin']}` → Employee / Team Lead get the 404 fallback
+3. **section gate (new)** — inside the screen, `org` is `adminOnly`. HR sees the item **locked, not hidden and
+   not 404'd**: it stays clickable, opens, and renders read-only. That is the manifest's _permission-limited_
+   case ("hide actions the role lacks"), so what disappears for HR is the **Save button**, not the section.
+
+Layer 3 is the important precedent: a locked section is still reachable. Hiding it would have contradicted
+"partial access", and 404-ing it would have applied the forbidden-URL rule to a role that _does_ have the
+screen. HR gets the warning banner "These settings are managed by a Super Admin. You have read-only access.",
+disabled controls, and no Save; Admin gets the editable form.
+
+**Files:** `features/configuration/data.ts` (types + section defs + seeds), `configuration-screen.tsx`,
+`components/section-nav.tsx` (lock affordance), `components/org-settings-form.tsx`, `components/section-dialog.tsx`
+(add/edit, validation on blur, submit disabled until valid). Route + `paths.configuration` + sidebar entry.
+Table sections reuse the shared `DataTable` with `permitActions={canEdit}`; the section's column defs drive it.
+
+**Data stubbed to endpoint shape**, with the seams recorded in `data.ts`:
+
+- Resources mirror `GET /departments · /employment_types · /leave_types · /leave_policies · /shifts ·
+/holidays?year= · /org/settings`; `OrgSettings` uses the spec's exact fields
+  (`leave_period_start_month`, `employee_code_prefix`, `timezone`, `locale`).
+- ⚠ Only `Department`, `LeaveType` and `OrgSettings` have documented schemas. Fields the design shows but the
+  spec does not provide are tagged **"not in spec"** in the file: `Department.code / head / employee_count`
+  (spec is `{id, name, parent_department_id}` only) and `LeaveType.code / annual_quota / carry_forward`
+  (spec is `{key, name, accrual_method, unit, paid}`). EmploymentType / LeavePolicy / Shift / Holiday have
+  **no spec schema at all** — the manifest calls them "under-defined until the OpenAPI file is read".
+- Delete copy names the real failure mode: `DELETE /departments/{id}` → **409 "in use"**.
+
+Verified in-browser: **HR** → "Partial access" chip, "org settings are read-only" subtitle, lock icon on the Org
+settings item, section opens to the read-only banner + disabled fields + **no Save**; table sections fully
+editable. **Admin** → "Full access" chip, no lock, no banner, editable form **with Save**; added a holiday end-to-end
+(dialog → validation → row "2 Oct 2026 · Gandhi Jayanti · Mandatory" → count 6 → toast). **Team Lead** → 404 at
+`/configuration`, no Configuration item in the sidebar. `tsc -b` clean; `eslint` clean (3 pre-existing
+`ui/sidebar.tsx` warnings only). `src/components/ui/` untouched.
