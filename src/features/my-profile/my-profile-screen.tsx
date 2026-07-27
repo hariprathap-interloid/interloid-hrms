@@ -74,10 +74,7 @@ export function MyProfileScreen() {
       <PageHeader
         icon={<span className="text-[15px] font-semibold">{initialsOf(user.name)}</span>}
         title={user.name}
-        badges={[
-          { label: user.id, tone: 'neutral' },
-          { label: 'Active', tone: 'success' },
-        ]}
+        badges={[{ label: user.id, tone: 'neutral' }]}
         description={`${user.title} · ${user.department}`}
         tabs={TABS}
         activeTab={tab}
@@ -96,11 +93,20 @@ export function MyProfileScreen() {
       )}
 
       {/* Employment meta strip (dept/title from persona; rest demo, not self-editable) */}
-      <div className="border-border bg-card grid grid-cols-2 gap-4 rounded-[14px] border p-5 shadow-sm sm:grid-cols-4">
+      <div className="border-border bg-card grid grid-cols-2 gap-4 rounded-[14px] border p-5 shadow-sm sm:grid-cols-3 lg:grid-cols-5">
         <Meta label="Department" value={user.department} />
         {profile.employment.map((field) => (
           <Meta key={field.label} label={field.label} value={field.value} />
         ))}
+        <div className="min-w-0">
+          <div className="text-muted-foreground text-[11px] font-semibold tracking-[0.03em] uppercase">
+            Status
+          </div>
+          <div className="text-foreground mt-1 inline-flex items-center gap-1.5 text-[13.5px] font-medium">
+            <span className="bg-success size-1.5 rounded-full" />
+            Active
+          </div>
+        </div>
       </div>
 
       {tab === 'personal' && (

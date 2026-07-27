@@ -3,14 +3,14 @@ import { RoleGate } from '@/features/auth/role-gate'
 import { EmployeesScreen } from '@/features/employees/employees-screen'
 
 /**
- * /employees — the workforce directory. Strict design scope (manifest: HR/Admin,
- * with Team Leads viewing read-only): gated to HR + Admin + Lead; any other role
- * (e.g. a plain employee) resolves to the full-page 404. In-screen, `permitActions`
- * further limits Leads to a read-only roster (HR/Admin manage).
+ * /employees — the workforce directory. Manifest scopes it to **HR + Admin only**
+ * ("Roles: HR, Admin"); every other role — Team Lead and Employee alike — hits the
+ * design's "forbidden URL → Not found" rule via the 404 fallback. Lead's people
+ * view is a separate route, Team Overview (/team), not this directory.
  */
 export default function EmployeesPage() {
   return (
-    <RoleGate allow={['hr', 'admin', 'lead']} fallback={<NotFoundPage />}>
+    <RoleGate allow={['hr', 'admin']} fallback={<NotFoundPage />}>
       <EmployeesScreen />
     </RoleGate>
   )

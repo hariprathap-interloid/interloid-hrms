@@ -110,6 +110,7 @@ export function buildProfile(user: DemoUser): ProfileData {
   const emergencyPhone = `+91 ${60000 + ((s >>> 7) % 40000)} ${10000 + ((s >>> 11) % 90000)}`
 
   const personal: Field[] = [
+    { label: 'Full name', value: user.name },
     { label: 'Date of birth', value: fmtDate(1 + (s % 28), s % 12, 1988 + (s % 11)) },
     { label: 'Gender', value: 'Not specified' },
     { label: 'Marital status', value: pick(['Single', 'Married'], s) },

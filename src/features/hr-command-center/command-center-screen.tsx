@@ -121,6 +121,7 @@ export function CommandCenterScreen() {
         <ChartCard title="Leave taken by type" sub="days · 2026 YTD">
           <CategoryBarChart
             data={data.leaveByType}
+            layout="horizontal"
             seriesLabel="Days"
             valueFormatter={(value) => `${value} d`}
           />

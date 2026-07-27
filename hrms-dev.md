@@ -1195,3 +1195,122 @@ Built the audit's Tier-1 items — deferrals that were mislabeled data-blocked b
   not 404), Employee → 404.
 
 `tsc -b` clean; `eslint .` clean (3 pre-existing `ui/sidebar.tsx` warnings only). No Tier 2 work started.
+
+---
+
+## Employees roles — corrected against the manifest quote (2026-07-25)
+
+Checked project 8f1502f5's `CLAUDE.md` (the source-of-truth manifest) for the Employees screen's roles.
+Quoted verbatim:
+
+- Screen → API contract, Employees `/employees`: **"Roles: HR, Admin."** (Team Lead not listed.)
+- Capability matrix: `Create / edit employee records | Employee — | Team Lead — | HR ✓ | Super Admin ✓`.
+- Global data-view rule: "permission-limited (hide actions the role lacks; **forbidden URL → 'Not found'**)".
+- Lead's people view is a **separate route**: Team Overview `/team` — "Roles: **Lead (team)**, HR/Admin (all)";
+  matrix `View team attendance & leave | — | Team | All | All`.
+
+**Both prior Lead-on-Employees behaviors were inventions, not from the design:**
+
+1. "Lead sees the roster **read-only**" (RoleGate `allow=['hr','admin','lead']` + `permitActions` off) — built on
+   the false premise that the manifest allowed Lead. The manifest says HR/Admin only.
+2. "Lead sees a **NoAccessState** panel" (Tier-1 1.7) — also wrong: the design sends a forbidden role to the
+   **404 "Not found"** page, not an in-screen no-access panel. ("Permission-limited" = hide _actions_ on a screen
+   the role can view; it is not a full-page panel for a forbidden route.)
+
+**Fix applied (design-correct):**
+
+- `app/pages/employees.tsx`: RoleGate `allow={['hr', 'admin']}` → Team Lead **and** Employee both resolve to the
+  404 fallback.
+- `employees-screen.tsx`: removed the `NoAccessState` early return + its imports; the screen now only ever renders
+  for a manager. `canManage` stays as the explicit `permitActions` gate (always true here).
+- Verified in-browser: HR → roster (+ Add employee); Lead → 404; Employee → 404.
+
+**Team Overview `/team` is Lead's proper people view — NOT YET BUILT** (design file `Team Overview.dc.html`;
+manifest roles Lead/HR/Admin). Logged as an open screen gap; it's where Lead's roster-equivalent access lives.
+
+**lead@ persona kept** (Rohan Gupta) — its test purpose is **repointed from Employees to Team Overview**. Until
+`/team` is built, lead@ exercises: the personal dashboard/ESS screens (all roles) and the **404 path** on
+`/employees` and `/command-center`. It is no longer a test of any Employees roster behavior.
+
+---
+
+## Tier 4 data-correctness items (2026-07-25)
+
+Two Tier-4 items that affect seam-honesty (not just style); the rest of Tier 4 (deep-links, personalized
+greeting, skeleton states) left as-is per instruction — they're improvements that don't fight the design.
+
+**Login "Demo accounts" box → dev-only.** Wrapped the box (which lists the demo emails + shared password +
+MFA code) in `{import.meta.env.DEV && (…)}` so a production build never renders it. Verified with an actual
+`vite build`: the prod bundle has **0 occurrences of "Demo accounts"** (dead-branch tree-shaken), vs the
+control string "Sign in with Microsoft" still present. In dev the box still renders for role testing.
+
+- **Credential validation kept (NOT gated).** Judgment: the `resolveUser(email)` + `DEMO_PASSWORD` check in
+  `submitEmail` is the app's actual stubbed auth (maps email→persona, enforces the shared password), not
+  dev-only scaffolding — it must run wherever the stub runs, and it doesn't _display_ anything. In prod the
+  box is hidden, so email/password requires knowing the password (not shown) → SSO is the prod path; that's
+  coherent and more secure. Note: the persona emails + `DEMO_PASSWORD` still exist in the JS bundle as the
+  stub's mechanism (2 hits for `admin@interloid.com`), which is inherent to any client-side auth stub and is
+  not UI exposure — flag if we later want the whole stub dev-gated (bigger change).
+
+**Employees invented statuses → real API enum.** The roster rendered `Active | On leave | Probation | Exited`;
+only `active | on_notice | exited` exist in the spec (`GET /employees filter[status]`). Fixed for seam honesty:
+
+- `employees/data.ts`: `Employee.status` now carries `{ key: EmployeeStatusKey; label; tone }` where `key` is
+  the canonical API value; `STATUS_META` keyed by the enum (active=success, on_notice=warning, exited=neutral);
+  `statusFor` produces only the three real statuses; `fetchEmployees` filters by `status.key` (was `.label`).
+- `employees-screen.tsx`: status tabs are now `All / Active / On notice / Exited` with `status` values = enum
+  keys. "On leave" / "Probation" are gone.
+- Verified in-browser: pills show Active/On notice/Exited only; the "On notice" tab filters to 8 rows all
+  on_notice; no "On leave"/"Probation" anywhere.
+
+`tsc -b` + `eslint` on employees/auth pass.
+
+---
+
+## Tier 2 fidelity sweep (2026-07-25)
+
+Shared-component fixes first (done once), then screen-local. Tier 3 data-blocked items untouched.
+
+**Shared:**
+
+- `CategoryBarChart` gained a `layout: 'vertical' | 'horizontal'` prop (not a new component). Horizontal =
+  labeled progress meters (track + % fill, no axis), consistent with the app's non-Recharts meter treatment.
+  Applied at HR Command Center "Leave taken by type"; dashboard "Attendance by department" stays vertical.
+- Error-state / DataView-slot pattern: already established in Tier 1.4 (My Leave, Notifications, My Attendance).
+  Employees error is handled inside the DataTable. Dashboard approvals + CC attention have no error state in the
+  design. No remaining recurring gap.
+
+**Dashboard** — employee branch: added the `AiInsightCard` ("Plan your time off", persona leave total,
+deep-links to My Leave), mirroring the org layout. _Left:_ org People-table (intentionally the separate
+Employees screen), in-`<main>` footer (AppShell chrome), area-trend 7D/30D/12M toggle (needs 3 granularities of
+series — borderline Tier 3), employee own-requests table (would duplicate the Pending KPI + kept notifications card).
+
+**HR Command Center** — "Leave taken by type" → horizontal meters (shared prop). _Left:_ violet accent on the
+anomaly tile + AI chip (needs a new `--violet` theme token; `info`/`primary` aren't wrong today), title/actions
+inside the hero (diverges from the app-wide PageHeader convention), Admin-variant insight #3 (admin-only nuance),
+mobile sticky action bar (mobile-only / app-shell concern).
+
+**Employees** — _left the whole Tier-2 set:_ Sort/Density/Columns toolbar, saved-view tabs, and the
+"Showing 1–8 of 48" + rows-per-page footer are all substantial DataTable-component features; deferred as a
+focused DataTable pass rather than piecemeal. (Org chart / Change requests sub-views are Tier 3 data-blocked.)
+
+**My Profile** — added "Full name" to Personal; moved Status into the meta grid (Department · Manager ·
+Employment · Joined · Status) and dropped the header "Active" badge it duplicated (reconciles the Tier-4
+"Active badge" addition with the Tier-2 "status in grid" miss — same underlying thing). Pending-changes banner
+was already built in Tier 1.1. _Left:_ gradient cover-banner + oversized avatar (diverges from PageHeader).
+
+**My Leave** — status chips now have leading dots; required `*` on Leave type + Reason; half-day wrapped with
+a "Counts as 0.5 day" subtitle; duration shows "—" at 0; empty state got a calendar icon + "Apply for leave"
+CTA (scrolls to the form); confirm dialog copy now carries the request detail + "This can't be undone". _Left:_
+history-as-table (vs DataViewList — a restructure), submit button state machine (loading/success/shake), and
+per-field validation with mono field-tags + overlap detection (medium; the combined inline error stays).
+
+**Notifications** — system icon → clock (was Bell); unread row background → solid `bg-primary-bg` (was /40);
+empty state → kind-specific copy ("No {kind} notifications right now") + "View all" when a filter is active.
+_Left:_ group-as-separate-cards (vs one list with inline group headers — a container restructure).
+
+**Auth** — Login "Forgot?" now routes to `/forgot-password` (was a dead button). _Left:_ Account Setup
+done-state brand tile, Reset Password single-eye-toggles-both-fields (minor nuances).
+
+Verified in-browser: employee dashboard AI insight; CC horizontal meters; My Leave dots/markers/subtitle/duration;
+Notifications clock/solid-unread/empty-CTA; My Profile Full name + Status-in-grid. `tsc -b` + `eslint` clean.

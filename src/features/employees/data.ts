@@ -10,13 +10,17 @@ import type { BadgeTone, Facet, SortingState } from '@/components/data-table'
  * and the screen (controlled/server-side pagination) is unchanged.
  * ------------------------------------------------------------------------- */
 
+/** The real API enum (GET /employees `filter[status]=active|on_notice|exited`). */
+export type EmployeeStatusKey = 'active' | 'on_notice' | 'exited'
+
 export interface Employee {
   id: string
   name: string
   email: string
   dept: string
   type: string
-  status: { label: string; tone: BadgeTone }
+  /** `key` is the canonical API value; label/tone are display-only. */
+  status: { key: EmployeeStatusKey; label: string; tone: BadgeTone }
   joined: string // ISO yyyy-mm-dd
 }
 
@@ -32,12 +36,13 @@ export const DEPARTMENTS = [
 
 export const EMPLOYMENT_TYPES = ['Full-time', 'Contract', 'Intern'] as const
 
-const STATUSES: Employee['status'][] = [
-  { label: 'Active', tone: 'success' },
-  { label: 'On leave', tone: 'warning' },
-  { label: 'Probation', tone: 'info' },
-  { label: 'Exited', tone: 'destructive' },
-]
+// Display metadata per API status key. Only these three exist in the enum —
+// "On leave" / "Probation" were invented labels and are gone (seam honesty).
+const STATUS_META: Record<EmployeeStatusKey, Employee['status']> = {
+  active: { key: 'active', label: 'Active', tone: 'success' },
+  on_notice: { key: 'on_notice', label: 'On notice', tone: 'warning' },
+  exited: { key: 'exited', label: 'Exited', tone: 'neutral' },
+}
 
 const FIRST = [
   'Aarav',
@@ -80,12 +85,11 @@ function pick<T>(arr: readonly T[], i: number): T {
   return arr[i % arr.length]!
 }
 
-// Weighted toward Active so the roster reads realistically.
+// Weighted toward active so the roster reads realistically.
 function statusFor(i: number): Employee['status'] {
-  if (i % 11 === 10) return STATUSES[3]! // Exited (rare)
-  if (i % 7 === 6) return STATUSES[2]! // Probation
-  if (i % 4 === 3) return STATUSES[1]! // On leave
-  return STATUSES[0]! // Active (majority)
+  if (i % 11 === 10) return STATUS_META.exited // exited (rare)
+  if (i % 5 === 4) return STATUS_META.on_notice // on notice (some)
+  return STATUS_META.active // active (majority)
 }
 
 /** The full directory — 48 rows, so server-side pagination is meaningful. */
@@ -152,7 +156,7 @@ export function fetchEmployees({ page, pageSize, sort, filters, q }: EmployeeQue
   let rows = ALL_EMPLOYEES.filter((employee) => {
     if (filters.dept?.length && !filters.dept.includes(employee.dept)) return false
     if (filters.type?.length && !filters.type.includes(employee.type)) return false
-    if (filters.status?.length && !filters.status.includes(employee.status.label)) return false
+    if (filters.status?.length && !filters.status.includes(employee.status.key)) return false
     if (
       needle &&
       !`${employee.name} ${employee.email} ${employee.id}`.toLowerCase().includes(needle)

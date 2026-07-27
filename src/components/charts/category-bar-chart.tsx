@@ -8,8 +8,11 @@ import {
 import { cn } from '@/lib/utils'
 
 /* ---------------------------------------------------------------------------
- * CategoryBarChart — vertical bars, one per category (design: Company
- * Dashboard "Attendance by department", Attendance "hours by project").
+ * CategoryBarChart — one bar per category.
+ *   layout="vertical"   (default) → Recharts vertical bars (design: Company
+ *                        Dashboard "Attendance by department").
+ *   layout="horizontal" → labeled progress meters, track + % fill, no axis
+ *                        (design: HR Command Center "Leave taken by type").
  * Each bar can carry its own --chart-* token so the design's highlight bars
  * (e.g. Design=amber, Sales=rose against indigo) survive.
  * ------------------------------------------------------------------------- */
@@ -25,6 +28,8 @@ interface CategoryBarChartProps {
   data: CategoryBar[]
   seriesLabel?: string
   valueFormatter?: (value: number) => string
+  /** Orientation: vertical Recharts bars, or horizontal labeled meters. */
+  layout?: 'vertical' | 'horizontal'
   className?: string
 }
 
@@ -32,8 +37,36 @@ export function CategoryBarChart({
   data,
   seriesLabel = 'Value',
   valueFormatter,
+  layout = 'vertical',
   className,
 }: CategoryBarChartProps) {
+  if (layout === 'horizontal') {
+    const max = Math.max(...data.map((bar) => bar.value), 1)
+    return (
+      <div className={cn('flex flex-col gap-3.5', className)}>
+        {data.map((bar) => (
+          <div key={bar.label} className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-[12.5px]">
+              <span className="text-foreground font-medium">{bar.label}</span>
+              <span className="text-muted-foreground tabular-nums">
+                {valueFormatter ? valueFormatter(bar.value) : bar.value}
+              </span>
+            </div>
+            <div className="bg-muted h-2 overflow-hidden rounded-full">
+              <div
+                className="h-full rounded-full transition-[width] duration-500"
+                style={{
+                  width: `${Math.round((bar.value / max) * 100)}%`,
+                  background: bar.color ?? 'var(--chart-1)',
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   const config = { value: { label: seriesLabel, color: 'var(--chart-1)' } } satisfies ChartConfig
 
   return (

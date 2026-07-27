@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { CalendarDays, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/page-header'
 import { DonutChart } from '@/components/charts'
@@ -52,6 +52,13 @@ const STATUS_CHIP: Record<LeaveStatus, string> = {
   cancelled: 'bg-muted text-muted-foreground',
 }
 
+const STATUS_DOT: Record<LeaveStatus, string> = {
+  pending: 'bg-warning',
+  approved: 'bg-success',
+  rejected: 'bg-destructive',
+  cancelled: 'bg-muted-foreground',
+}
+
 export function MyLeaveScreen() {
   const { user } = useAuth()
   const confirm = useConfirm()
@@ -82,7 +89,7 @@ export function MyLeaveScreen() {
   const requestCancel = (request: LeaveRequest) => {
     confirm({
       title: 'Cancel this leave?',
-      description: `${request.days} ${request.days === 1 ? 'day' : 'days'} will return to your balance.`,
+      description: `${request.type} · ${request.dates} (${request.days} ${request.days === 1 ? 'day' : 'days'}). This can’t be undone — the days return to your balance.`,
       confirmLabel: 'Cancel leave',
       cancelLabel: 'Keep it',
       tone: 'destructive',
@@ -149,8 +156,21 @@ export function MyLeaveScreen() {
               loading={<SkeletonRows rows={4} withStatus />}
               empty={
                 <EmptyState
+                  icon={<CalendarDays />}
                   title="No requests yet"
-                  description="Apply for leave and it will show up here."
+                  description="Apply for leave using the form and it will show up here."
+                  action={
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        document
+                          .getElementById('leave-apply-form')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
+                    >
+                      Apply for leave
+                    </Button>
+                  }
                 />
               }
               error={
@@ -241,10 +261,11 @@ function HistoryRow({ request, onCancel }: { request: LeaveRequest; onCancel: ()
       </div>
       <span
         className={cn(
-          'shrink-0 rounded-full px-2.5 py-[3px] text-[11.5px] font-semibold capitalize',
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-[3px] text-[11.5px] font-semibold capitalize',
           STATUS_CHIP[request.status],
         )}
       >
+        <span className={cn('size-1.5 rounded-full', STATUS_DOT[request.status])} />
         {request.status}
       </span>
       {cancellable && (
@@ -312,11 +333,16 @@ function RequestForm({
   }
 
   return (
-    <section className="border-border bg-card flex flex-col gap-4 rounded-[14px] border p-5 shadow-sm">
+    <section
+      id="leave-apply-form"
+      className="border-border bg-card flex flex-col gap-4 rounded-[14px] border p-5 shadow-sm"
+    >
       <div className="text-foreground text-[14px] font-semibold">Request leave</div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-[13px]">Leave type</Label>
+        <Label className="text-[13px]">
+          Leave type <span className="text-destructive">*</span>
+        </Label>
         <Select
           value={type}
           onValueChange={(value) => {
@@ -357,16 +383,19 @@ function RequestForm({
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <Label htmlFor="half-day" className="text-[13px]">
-          Half day (0.5)
-        </Label>
+      <div className="bg-muted/40 flex items-center justify-between rounded-[10px] px-3 py-2.5">
+        <div>
+          <Label htmlFor="half-day" className="text-[13px]">
+            Half day
+          </Label>
+          <div className="text-muted-foreground text-[11.5px]">Counts as 0.5 day</div>
+        </div>
         <Switch id="half-day" checked={halfDay} onCheckedChange={setHalfDay} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="leave-reason" className="text-[13px]">
-          Reason
+          Reason <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id="leave-reason"
@@ -383,7 +412,7 @@ function RequestForm({
         <span className="text-muted-foreground text-[12.5px]">
           Duration{' '}
           <span className="text-foreground bg-primary-bg ml-1 rounded-full px-2 py-0.5 font-semibold tabular-nums">
-            {days} {days === 1 ? 'day' : 'days'}
+            {days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'}
           </span>
         </span>
         <Button onClick={submit} disabled={!type || !start || !reason.trim()}>

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  Bell,
   CalendarDays,
   CheckCheck,
   ClipboardCheck,
+  Clock3,
   RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
@@ -38,7 +38,7 @@ import {
 const KIND_META: Record<NotifKind, { icon: LucideIcon; tile: string }> = {
   approval: { icon: ClipboardCheck, tile: 'bg-primary-bg text-primary' },
   leave: { icon: CalendarDays, tile: 'bg-success-subtle text-success-subtle-foreground' },
-  system: { icon: Bell, tile: 'bg-info-subtle text-info-subtle-foreground' },
+  system: { icon: Clock3, tile: 'bg-info-subtle text-info-subtle-foreground' },
 }
 
 const GROUP_ORDER: NotifGroup[] = ['today', 'yesterday', 'earlier']
@@ -138,7 +138,18 @@ export function NotificationsScreen() {
             <EmptyState
               icon={<CheckCheck />}
               title="You're all caught up"
-              description="No notifications here right now."
+              description={
+                tab === 'all'
+                  ? 'No notifications here right now.'
+                  : `No ${(tabs.find((t) => t.key === tab)?.label ?? '').toLowerCase()} notifications right now.`
+              }
+              action={
+                tab !== 'all' ? (
+                  <Button variant="outline" onClick={() => setTab('all')}>
+                    View all
+                  </Button>
+                ) : undefined
+              }
             />
           }
           error={
@@ -183,7 +194,7 @@ function NotificationRow({ item, onRead }: { item: Notification; onRead: () => v
       onClick={onRead}
       className={cn(
         'border-border hover:bg-muted/50 flex w-full items-start gap-3 border-t px-[18px] py-3.5 text-left transition-colors',
-        item.unread && 'bg-primary-bg/40',
+        item.unread && 'bg-primary-bg',
       )}
     >
       <span

@@ -13,6 +13,7 @@ import {
   type Notification,
   type NotifKind,
 } from '@/features/notifications/data'
+import { AiInsightCard } from './components/ai-insight-card'
 import { KpiCard } from './components/kpi-card'
 import { buildEmployeeKpis } from './employee-data'
 
@@ -42,6 +43,11 @@ export function EmployeeDashboard({ status }: { status: Status }) {
   const firstName = user.name.split(' ')[0]
   const kpis = buildEmployeeKpis(user)
   const balances = buildBalances(user.leaveBalance)
+  const totalLeave = +(
+    user.leaveBalance.annual +
+    user.leaveBalance.sick +
+    user.leaveBalance.casual
+  ).toFixed(1)
   const attendance = summarize(getMonth())
   const pending = DEMO_HISTORY.filter((request) => request.status === 'pending').length
   const notifications = DEMO_NOTIFICATIONS.filter(
@@ -67,6 +73,15 @@ export function EmployeeDashboard({ status }: { status: Status }) {
             : { label: 'Not checked in', tone: 'warning' },
           { label: `${pending} pending`, tone: pending > 0 ? 'warning' : 'neutral' },
         ]}
+      />
+
+      <AiInsightCard
+        title="Plan your time off"
+        body={`You have ${totalLeave} leave days available this year${
+          pending > 0 ? `, and ${pending} request${pending === 1 ? '' : 's'} awaiting approval` : ''
+        }. Booking ahead helps your team plan around you.`}
+        recommendations={['Apply for leave', 'View my balances']}
+        onRecommend={() => void navigate(paths.meLeave.getHref())}
       />
 
       {/* KPI row */}

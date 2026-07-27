@@ -238,7 +238,11 @@ export function LoginPanel() {
                   <Label htmlFor="password" className="text-[13px]">
                     Password
                   </Label>
-                  <button type="button" className="text-primary text-[12px] font-medium">
+                  <button
+                    type="button"
+                    className="text-primary text-[12px] font-medium"
+                    onClick={() => void navigate(paths.forgotPassword.getHref())}
+                  >
                     Forgot?
                   </button>
                 </div>
@@ -280,26 +284,30 @@ export function LoginPanel() {
             </div>
           )}
 
-          <div className="border-border bg-muted/40 mt-5 rounded-[10px] border px-3.5 py-3">
-            <div className="text-muted-foreground mb-2 text-[10.5px] font-semibold tracking-[0.05em] uppercase">
-              Demo accounts
+          {/* Dev-only: surfaces demo credentials for role testing. Gated to
+              import.meta.env.DEV so a production build never exposes them. */}
+          {import.meta.env.DEV && (
+            <div className="border-border bg-muted/40 mt-5 rounded-[10px] border px-3.5 py-3">
+              <div className="text-muted-foreground mb-2 text-[10.5px] font-semibold tracking-[0.05em] uppercase">
+                Demo accounts
+              </div>
+              <div className="flex flex-col gap-1">
+                {DEMO_ACCOUNTS.map((account) => (
+                  <div
+                    key={account.email}
+                    className="flex items-center justify-between gap-3 text-[12px]"
+                  >
+                    <span className="text-foreground font-mono">{account.email}</span>
+                    <span className="text-muted-foreground">{account.title}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-muted-foreground mt-2.5 text-[11.5px]">
+                Password <span className="text-foreground font-mono">{DEMO_PASSWORD}</span> · MFA
+                code <span className="text-foreground font-mono">123456</span>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              {DEMO_ACCOUNTS.map((account) => (
-                <div
-                  key={account.email}
-                  className="flex items-center justify-between gap-3 text-[12px]"
-                >
-                  <span className="text-foreground font-mono">{account.email}</span>
-                  <span className="text-muted-foreground">{account.title}</span>
-                </div>
-              ))}
-            </div>
-            <div className="text-muted-foreground mt-2.5 text-[11.5px]">
-              Password <span className="text-foreground font-mono">{DEMO_PASSWORD}</span> · MFA code{' '}
-              <span className="text-foreground font-mono">123456</span>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
