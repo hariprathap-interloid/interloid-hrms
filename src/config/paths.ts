@@ -27,6 +27,10 @@ export const paths = {
     path: '/me/leave',
     getHref: () => '/me/leave',
   },
+  auditLog: {
+    path: '/audit-log',
+    getHref: () => '/audit-log',
+  },
   notifications: {
     path: '/notifications',
     getHref: () => '/notifications',

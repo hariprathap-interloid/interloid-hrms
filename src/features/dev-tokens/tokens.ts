@@ -240,6 +240,32 @@ export const colorGroups: ColorGroup[] = [
         className: 'bg-info-subtle-foreground',
         sampleClassName: 'text-info-subtle',
       },
+      // Violet is the design's non-semantic accent for AI / anomaly /
+      // system-origin surfaces — not a status role like the four above.
+      {
+        label: 'violet',
+        varName: '--violet',
+        className: 'bg-violet',
+        sampleClassName: 'text-violet-foreground',
+      },
+      {
+        label: 'violet-foreground',
+        varName: '--violet-foreground',
+        className: 'bg-violet-foreground',
+        sampleClassName: 'text-violet',
+      },
+      {
+        label: 'violet-subtle',
+        varName: '--violet-subtle',
+        className: 'bg-violet-subtle',
+        sampleClassName: 'text-violet-subtle-foreground',
+      },
+      {
+        label: 'violet-subtle-foreground',
+        varName: '--violet-subtle-foreground',
+        className: 'bg-violet-subtle-foreground',
+        sampleClassName: 'text-violet-subtle',
+      },
     ],
   },
   {

@@ -74,6 +74,13 @@
   --info-foreground: #ffffff; /* bridge */
   --info-subtle: #eff6ff;
   --info-subtle-foreground: #1d4ed8;
+  /* Violet — the design's non-semantic accent for AI / anomaly / system-origin.
+     Values from the design's per-screen helmets (HR Command Center + Audit Log
+     agree); it predates tokens/colors.css, which is why it isn't in there. */
+  --violet: #7c3aed;
+  --violet-foreground: #ffffff; /* bridge: on-solid text (not in design) */
+  --violet-subtle: #f5f3ff;
+  --violet-subtle-foreground: #6d28d9;
 
   /* Charts */
   --chart-1: #4f46e5;
@@ -172,6 +179,10 @@
   --info-foreground: #0b1120;
   --info-subtle: rgba(37, 99, 235, 0.18);
   --info-subtle-foreground: #93c5fd;
+  --violet: #a78bfa;
+  --violet-foreground: #0b1120;
+  --violet-subtle: rgba(124, 58, 237, 0.18);
+  --violet-subtle-foreground: #c4b5fd;
 
   --chart-1: #6366f1;
   --chart-2: #38bdf8;
@@ -251,6 +262,10 @@
   --color-info-foreground: var(--info-foreground);
   --color-info-subtle: var(--info-subtle);
   --color-info-subtle-foreground: var(--info-subtle-foreground);
+  --color-violet: var(--violet);
+  --color-violet-foreground: var(--violet-foreground);
+  --color-violet-subtle: var(--violet-subtle);
+  --color-violet-subtle-foreground: var(--violet-subtle-foreground);
 
   /* Charts */
   --color-chart-1: var(--chart-1);

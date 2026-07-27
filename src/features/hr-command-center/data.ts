@@ -18,7 +18,7 @@ import type { AreaTrendPoint, CategoryBar } from '@/components/charts'
  * components/charts wrappers; the heatmap is a CSS grid (see punctuality-heatmap).
  * ------------------------------------------------------------------------- */
 
-type IconTone = 'primary' | 'success' | 'warning' | 'destructive' | 'info'
+export type IconTone = 'primary' | 'success' | 'warning' | 'destructive' | 'info' | 'violet'
 
 export interface HeroKpi {
   key: string
@@ -48,7 +48,7 @@ export interface AttentionItem {
   /** Optional AI badge text. */
   ai?: string
   primaryLabel: string
-  primaryTone: 'primary' | 'destructive'
+  primaryTone: 'primary' | 'destructive' | 'violet'
   ghostLabel?: string
 }
 
@@ -198,12 +198,13 @@ const hrData: CommandCenterData = {
     {
       id: 'anom',
       icon: Sparkles,
-      tone: 'info',
+      // Violet is the design's AI/anomaly accent — not a status role.
+      tone: 'violet',
       title: 'Late-punch spike in Operations',
       meta: '+18% vs last week · 6 employees',
       ai: 'AI flagged',
       primaryLabel: 'Investigate',
-      primaryTone: 'primary',
+      primaryTone: 'violet',
       ghostLabel: 'Dismiss',
     },
     {

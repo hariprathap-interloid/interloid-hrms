@@ -49,7 +49,7 @@ export function DataViewList({ className, children, ...props }: React.ComponentP
   )
 }
 
-type PillTone = 'success' | 'warning' | 'destructive' | 'info'
+type PillTone = 'success' | 'warning' | 'destructive' | 'info' | 'primary' | 'violet' | 'neutral'
 
 const PILL_TONE: Record<PillTone, { pill: string; dot: string }> = {
   success: { pill: 'bg-success-subtle text-success-subtle-foreground', dot: 'bg-success' },
@@ -59,6 +59,9 @@ const PILL_TONE: Record<PillTone, { pill: string; dot: string }> = {
     dot: 'bg-destructive',
   },
   info: { pill: 'bg-info-subtle text-info-subtle-foreground', dot: 'bg-info' },
+  primary: { pill: 'bg-primary-bg text-primary', dot: 'bg-primary' },
+  violet: { pill: 'bg-violet-subtle text-violet-subtle-foreground', dot: 'bg-violet' },
+  neutral: { pill: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
 }
 
 /** Status pill: subtle-tinted chip with a leading solid dot. */

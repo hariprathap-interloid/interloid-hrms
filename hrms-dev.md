@@ -1314,3 +1314,132 @@ done-state brand tile, Reset Password single-eye-toggles-both-fields (minor nuan
 
 Verified in-browser: employee dashboard AI insight; CC horizontal meters; My Leave dots/markers/subtitle/duration;
 Notifications clock/solid-unread/empty-CTA; My Profile Full name + Status-in-grid. `tsc -b` + `eslint` clean.
+
+---
+
+## Admin cluster — roles resolved, DataTable footer pass, Audit Log built (2026-07-27)
+
+### Manifest roles for the Admin cluster (quoted from project 8f1502f5 `CLAUDE.md`)
+
+| Route            | Screen → API contract                                                                           | Capability matrix row                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `/audit-log`     | **"Roles: HR (scoped), Admin (full)."**                                                         | `Audit log \| — \| — \| Scoped \| ✓ (full)`                                          |
+| `/configuration` | **"Roles: HR (partial — depts/shifts/leave types/holidays), Admin (full incl. org settings)."** | `Configure depts / shifts / leave types / holidays \| — \| — \| Partial \| ✓ (full)` |
+| `/admin`         | **"Roles: Admin only."**                                                                        | `Manage users, roles & integration settings \| — \| — \| — \| ✓`                     |
+
+Audit Log and Configuration both admit HR in a _reduced_ form — the manifest's **permission-limited** case
+("hide actions the role lacks"), applied **inside** the screen. Only Admin Console is a hard single-role gate,
+and its design renders an in-screen **"Restricted area … 403 · forbidden"** panel for non-Admins. Neither is the
+forbidden-URL 404 rule; that still governs roles with _no_ capability at all (Employee / Team Lead here).
+
+**None of the three renders a KPI row** (checked each `.dc.html` directly): Audit Log = header → scope banner →
+filter toolbar → table; Configuration = header → 7-section sub-nav → form or table; Admin Console = header →
+3 tabs → users table / roles matrix / integration connector cards (config panels, not KPIs). **So the deferred
+`kpi-card` visual check does NOT fire on this cluster and stays open** — nearest triggers are Team Overview or
+Attendance.
+
+### DataTable pass — rescoped against the design contract
+
+The Tier-2 note called Sort/Density/Columns, saved-view tabs and the footer "substantial DataTable-component
+features". Reading `components/DataTable/DataTable.d.ts` + `.prompt.md` shows that was wrong for two of the three:
+
+- `density` is already a **DataTable prop**; the segmented control that switches it is screen chrome.
+- Sort / Density / Columns / Export buttons belong in the **`toolbar` slot** — the contract describes it as
+  "Right-aligned toolbar slot (search, filter, density, export, create…)", supplied by the screen.
+- **Saved-view tabs are not in the DataTable contract at all** — Employees-screen chrome.
+- Only the **footer** is genuinely shared (`caption` + the pagination props).
+
+Built the footer only:
+
+- `caption` now defaults to the design's range string — **"Showing 1–8 of 48"** (was `N rows`). Counts rows
+  actually on the page so the last page reads `41–48 of 48`, not a full page-size stride.
+- New **`footerMeta`** — right-aligned footer slot before the pager (rows-per-page, status notes).
+- Footer gained the design's `border-top`.
+- Employees picks the range label up for free — that Tier-2 item is now done without touching the screen.
+
+**Logged as Employees-screen work, not DataTable work:** the Sort / Density / Columns toolbar controls and the
+saved-view tabs. They're screen-level composition in the `toolbar` slot per the contract, and they'll be built
+and verified against `Employees.dc.html` when that screen's pass happens. Rows-per-page control also belongs
+there (via `footerMeta`) — Audit Log's design has no such control.
+
+`StatusPill` (data-view) gained `primary` + `neutral` tones so source pills stay token-driven.
+
+### Audit Log `/audit-log` — built
+
+- `features/audit-log/data.ts` — event model + the 15 seeded events, actor registry, action/source metadata,
+  filtering, `filterOptions`, IST formatters, `rangeLabel`, RFC-4180 `toCsv` (UTF-8 BOM for Excel).
+  **Seam note carried in the file:** the spec documents only the _filter params_ for `GET /audit_logs` and
+  **no audit_log resource schema** — the displayed columns are undocumented and must be reconciled later.
+- `audit-log-screen.tsx` — PageHeader (Read-only + Full-access/Scoped-view chips, Export CSV), HR scope banner,
+  the screen's own filter toolbar (search / Actor / Entity type / From / To / Clear), DataTable, detail Sheet.
+- `components/event-detail-sheet.tsx` — When / Actor / Target / Source / Changes (from→to) / Context +
+  immutability note. Read-only: an append-only log has no mutations, so there are no row actions, no selection
+  and no bulk bar anywhere on this screen; **export is the only action**.
+- Footer uses the design's own line — `{n} events · {range}` + "Append-only · immutable" via `footerMeta` — not
+  the new showing-range default.
+- Route `/audit-log` + `paths.auditLog` + sidebar entry (roles `['hr','admin']`).
+
+**Scoping is real, not cosmetic:** `ADMIN_ONLY_ENTITIES` = user / role / integration_setting. HR sees 11 of 15
+events and the banner names the 4 it's hiding; Admin sees all 15.
+
+**Bug fixed in passing:** the sidebar's Employees item still carried `roles: ['hr','admin','lead']` and a comment
+claiming "Team Leads may view it read-only" — stale since the role-gating correction. Lead saw the nav item and
+then hit a 404. Now `['hr','admin']`, matching the route gate.
+
+**Violet token deferral now has a second consumer.** The design tints the "System" source pill with `--violet`
+(same token the CC anomaly tile wanted). Still not added; `System` renders `neutral` and the substitution is
+documented in `data.ts`. Two consumers now — worth adding the token when a third appears or when CC is revisited.
+
+Verified in-browser across all three roles: **HR** → scoped view, 11 events, banner "4 Super-Admin events…",
+detail sheet opens with changes + context; **Admin** → "Full access" chip, no banner, 15 events with
+Integration setting / Role / User rows present; **Team Lead** → 404 at `/audit-log`, and no Employees or Audit
+log item in the sidebar. Employees footer confirmed reading "Showing 1–8 of 48 · Page 1 of 6".
+`tsc -b` clean; `eslint` clean (3 pre-existing `ui/sidebar.tsx` warnings only).
+
+---
+
+## `--violet` graduated from approximation to real token (2026-07-27)
+
+Violet crossed the "recurring → real token" threshold at **three consumers**, so it stopped being an
+approximation and became a first-class theme token. Until now each consumer substituted something close
+enough (`info` / `primary` / `neutral`) and the gap was carried as a deferral.
+
+**Values pulled from the design, not approximated.** Note `tokens/colors.css` — the canonical token file —
+does **not** contain violet; it predates the accent. The real values live in the per-screen `<helmet>` blocks,
+and `HR Command Center.dc.html` and `Audit Log.dc.html` agree exactly:
+
+|                                                     | light     | dark                    |
+| --------------------------------------------------- | --------- | ----------------------- |
+| `--violet`                                          | `#7C3AED` | `#A78BFA`               |
+| `--violet-subtle` (design `--violet-bg`)            | `#F5F3FF` | `rgba(124,58,237,0.18)` |
+| `--violet-subtle-foreground` (design `--violet-fg`) | `#6D28D9` | `#C4B5FD`               |
+
+Added to `styles/index.css` in **both** theme blocks + the `@theme inline` layer (`--color-violet*`), following
+the app's solid / on-solid / subtle / on-subtle convention. `--violet-foreground` is a **bridge** value (the
+design defines no on-solid text), same as the other semantic roles. Catalogued in `/dev/tokens` under Semantic,
+with a comment noting violet is a non-semantic _accent_ (AI / anomaly / system-origin), not a status role.
+
+**Three consumers repointed:**
+
+1. **CC anomaly tile** — `tone: 'info'` → `'violet'`, and the "Investigate" button `primaryTone: 'primary'` →
+   `'violet'` (design: `chipBg:var(--violet-bg)`, `chipFg:var(--violet)`, `primaryBg:var(--violet)`).
+2. **CC AI chips + Interloid AI card** — the "AI flagged" / "2 teammates already off" chips, the card's
+   gradient border and sparkle tile (`from-primary` → `from-violet`, keeping the violet→accent ramp), and the
+   BETA chip.
+3. **Audit Log "System" source pill** — `neutral` → `violet`, joining UI=primary / Integration=info.
+   `StatusPill` gained a `violet` tone.
+
+**Correction — the dashboard's `AiInsightCard` was NOT repointed, deliberately.** "The AI card" in the brief
+turned out to be two different cards. Checked `Company Dashboard.dc.html`: its insight card is
+`--primary-tint` / `--primary-700` — **primary, not violet** — so our `bg-primary-bg text-primary` is already
+design-correct and changing it would have been a regression. The violet AI surface is the _Command Center's_
+"Interloid AI" card, which is what got repointed. Violet still has three consumers; the third is the Audit Log
+pill, not the dashboard card.
+
+Tidy-up: `IconTone` was duplicated in `hr-command-center/data.ts` and `command-center-screen.tsx` (the screen's
+copy silently lacked `violet`). Now exported once from `data.ts` and imported by the screen.
+
+Verified in-browser in **both themes**: CC anomaly tile / AI chips / Investigate / BETA / AI-card gradient all
+violet, and Audit Log showing three distinct source tints (UI indigo · System violet · Integration blue).
+`/dev/tokens` renders all four violet swatches with correct per-theme values. `tsc -b` clean; `eslint` clean
+(3 pre-existing `ui/sidebar.tsx` warnings only).

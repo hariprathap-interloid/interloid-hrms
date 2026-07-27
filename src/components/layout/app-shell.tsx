@@ -11,6 +11,7 @@ import {
   Layers,
   Palette,
   Radar,
+  ScrollText,
   Table2,
   Users,
 } from 'lucide-react'
@@ -50,14 +51,23 @@ const NAV_GROUPS: NavGroup[] = [
         roles: ['hr', 'admin'],
       },
       {
-        // Directory is a management screen (HR/Admin); Team Leads may view it
-        // read-only. Row/bulk actions are further gated in-screen via
-        // permitActions. Plain employees don't get the item.
+        // Manifest scopes the directory to HR/Admin ("Roles: HR, Admin"); every
+        // other role is 404'd by the route gate, so the item must not appear for
+        // them. Team Lead's people view is the separate Team Overview (/team).
         key: 'employees',
         label: 'Employees',
         icon: Users,
         href: paths.employees.getHref(),
-        roles: ['hr', 'admin', 'lead'],
+        roles: ['hr', 'admin'],
+      },
+      {
+        // "Roles: HR (scoped), Admin (full)" — both see the item; the screen
+        // applies HR's scoping.
+        key: 'audit-log',
+        label: 'Audit log',
+        icon: ScrollText,
+        href: paths.auditLog.getHref(),
+        roles: ['hr', 'admin'],
       },
     ],
   },

@@ -21,6 +21,7 @@ import {
   type AttentionItem,
   type BentoKpi,
   type HeroKpi,
+  type IconTone,
   type Insight,
   type TimelineEvent,
 } from './data'
@@ -32,14 +33,13 @@ import {
  * components/charts wrappers; the heatmap is a CSS grid (PunctualityHeatmap).
  * ------------------------------------------------------------------------- */
 
-type IconTone = 'primary' | 'success' | 'warning' | 'destructive' | 'info'
-
 const TONE_TILE: Record<IconTone, string> = {
   primary: 'bg-primary-bg text-primary',
   success: 'bg-success-subtle text-success-subtle-foreground',
   warning: 'bg-warning-subtle text-warning-subtle-foreground',
   destructive: 'bg-destructive-subtle text-destructive',
   info: 'bg-info-subtle text-info-subtle-foreground',
+  violet: 'bg-violet-subtle text-violet-subtle-foreground',
 }
 
 type Status = 'loading' | 'populated'
@@ -254,7 +254,7 @@ function AttentionRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-foreground text-[13.5px] font-semibold">{item.title}</span>
           {item.ai && (
-            <span className="text-primary bg-primary-bg inline-flex items-center gap-1 rounded-full px-[7px] py-px text-[10.5px] font-semibold [&_svg]:size-2.5">
+            <span className="text-violet-subtle-foreground bg-violet-subtle inline-flex items-center gap-1 rounded-full px-[7px] py-px text-[10.5px] font-semibold [&_svg]:size-2.5">
               <Sparkles fill="currentColor" strokeWidth={0} />
               {item.ai}
             </span>
@@ -281,6 +281,7 @@ function AttentionRow({
             'h-8 px-3 text-[12.5px]',
             item.primaryTone === 'destructive' &&
               'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+            item.primaryTone === 'violet' && 'bg-violet text-violet-foreground hover:bg-violet/90',
           )}
           onClick={() => onResolve(item, `${item.primaryLabel} · ${primaryName}`)}
         >
@@ -295,17 +296,17 @@ function AttentionRow({
 
 function AiCard({ insights, atRisk }: { insights: Insight[]; atRisk: AtRiskPerson[] }) {
   return (
-    <section className="from-primary to-brand-accent rounded-[16px] bg-linear-to-br p-px shadow-sm">
+    <section className="from-violet to-brand-accent rounded-[16px] bg-linear-to-br p-px shadow-sm">
       <div className="bg-card h-full rounded-[15px] p-4">
         <div className="mb-3 flex items-center gap-2.5">
-          <span className="from-primary to-brand-accent text-primary-foreground flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-linear-to-br [&_svg]:size-4">
+          <span className="from-violet to-brand-accent text-primary-foreground flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-linear-to-br [&_svg]:size-4">
             <Sparkles fill="currentColor" strokeWidth={0} />
           </span>
           <div className="flex-1">
             <div className="text-foreground text-[14px] font-semibold">Interloid AI</div>
             <div className="text-muted-foreground text-[11.5px]">Insights for this week</div>
           </div>
-          <span className="text-primary bg-primary-bg rounded-md px-[7px] py-0.5 text-[10px] font-bold tracking-[0.05em]">
+          <span className="text-violet-subtle-foreground bg-violet-subtle rounded-md px-[7px] py-0.5 text-[10px] font-bold tracking-[0.05em]">
             BETA
           </span>
         </div>

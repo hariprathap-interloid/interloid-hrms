@@ -50,6 +50,10 @@ import { cn } from '@/lib/utils'
  * - Row selection + a bulk-action bar, per-row ⋯ actions, and a `toolbar` slot
  *   (FilterBar fills it) — all gated by `permitActions` for role limits.
  * - Non-populated states render through the shared DataView lifecycle.
+ * - The footer shows a range ("Showing 1–8 of 48") unless `caption` overrides it,
+ *   with `footerMeta` as the right-aligned slot before the pager. Screen-level
+ *   toolbar chrome (Sort / Density / Columns, saved-view tabs) belongs in the
+ *   `toolbar` slot per the design contract — not in here.
  * - Rows are non-interactive by default (per the States spec); `onRowClick`
  *   opts into the interactive variant (hover / pointer / keyboard nav).
  * ------------------------------------------------------------------------- */
@@ -140,8 +144,10 @@ export interface DataTableProps<TData> {
   title?: ReactNode
   /** Right-aligned toolbar slot (FilterBar, search, create…). */
   toolbar?: ReactNode
-  /** Footer summary; defaults to the row count. */
+  /** Footer summary; defaults to the showing-range ("Showing 1–8 of 48"). */
   caption?: ReactNode
+  /** Right-aligned footer slot, before the pager (rows-per-page, status notes…). */
+  footerMeta?: ReactNode
 
   /** Lifecycle slots — reuse EmptyState/ErrorState/NoAccessState. Sensible defaults if omitted. */
   loading?: ReactNode
@@ -176,6 +182,7 @@ export function DataTable<TData>({
   title,
   toolbar,
   caption,
+  footerMeta,
   loading,
   loadingRows = 6,
   empty,
@@ -242,6 +249,12 @@ export function DataTable<TData>({
   const interactive = Boolean(onRowClick)
   const selectedCount = selectionToKeys(rowSelection).length
   const pageCount = table.getPageCount()
+
+  // Footer showing-range. Counts the rows actually rendered on this page, so the
+  // last page reads "41–48 of 48" rather than a full page-size stride.
+  const rowsOnPage = table.getRowModel().rows.length
+  const firstRow = rowsOnPage === 0 ? 0 : pageIndex * pageSize + 1
+  const lastRow = Math.min(firstRow + rowsOnPage - 1, totalRows)
 
   const handleRowKey = (event: KeyboardEvent<HTMLTableRowElement>, row: TData) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -412,11 +425,14 @@ export function DataTable<TData>({
             </TableBody>
           </Table>
 
-          <div className="flex flex-wrap items-center gap-3 px-4 py-[11px]">
+          <div className="border-border flex flex-wrap items-center gap-3 border-t px-4 py-[11px]">
             <span className="text-muted-foreground text-[12.5px]">
-              {caption ?? `${totalRows} ${totalRows === 1 ? 'row' : 'rows'}`}
+              {caption ?? `Showing ${firstRow}–${lastRow} of ${totalRows}`}
             </span>
             <div className="flex-1" />
+            {footerMeta && (
+              <span className="text-muted-foreground text-[12.5px]">{footerMeta}</span>
+            )}
             {pageCount > 1 && (
               <>
                 <span className="text-muted-foreground text-[12.5px]">
