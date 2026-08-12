@@ -31,6 +31,10 @@ export const paths = {
     path: '/configuration',
     getHref: () => '/configuration',
   },
+  adminConsole: {
+    path: '/admin',
+    getHref: () => '/admin',
+  },
   auditLog: {
     path: '/audit-log',
     getHref: () => '/audit-log',

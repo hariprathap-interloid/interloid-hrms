@@ -13,6 +13,7 @@ import {
   Radar,
   ScrollText,
   Settings2,
+  ShieldCheck,
   Table2,
   Users,
 } from 'lucide-react'
@@ -69,6 +70,15 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Settings2,
         href: paths.configuration.getHref(),
         roles: ['hr', 'admin'],
+      },
+      {
+        // "Roles: Admin only" — no reduced variant, so the item is Admin-only
+        // and the route 404s everyone else. Nav and gate must agree.
+        key: 'admin-console',
+        label: 'Admin console',
+        icon: ShieldCheck,
+        href: paths.adminConsole.getHref(),
+        roles: ['admin'],
       },
       {
         // "Roles: HR (scoped), Admin (full)" — both see the item; the screen

@@ -1531,3 +1531,49 @@ editable. **Admin** → "Full access" chip, no lock, no banner, editable form **
 (dialog → validation → row "2 Oct 2026 · Gandhi Jayanti · Mandatory" → count 6 → toast). **Team Lead** → 404 at
 `/configuration`, no Configuration item in the sidebar. `tsc -b` clean; `eslint` clean (3 pre-existing
 `ui/sidebar.tsx` warnings only). `src/components/ui/` untouched.
+
+---
+
+## Admin Console `/admin` — built, Admin cluster complete (2026-07-27)
+
+Manifest, quoted: **"Roles: Admin only."** Matrix: `Manage users, roles & integration settings | — | — | — | ✓`.
+
+**Pure route gate — the only one in the cluster.** Audit Log and Configuration both have reduced variants, so
+their role split lives inside the screen. Admin Console has none, so `RoleGate allow={['admin']}` with the 404
+fallback is the whole story: **HR and every role below get "Not found"**, and the sidebar item is `roles:
+['admin']` so nav and gate agree. **The design file's in-screen "Restricted area · 403 · forbidden" panel is
+deliberately NOT built** — per the 2026-07-27 finding it is standalone-demo scaffolding driven by the file's own
+role switcher, and the manifest grants no exception to the forbidden-URL rule. Both the page and the screen
+carry that reasoning in their header comments so it isn't re-litigated.
+
+**Three tabs, per the design:**
+
+- **Users** — `DataTable` over `GET /employees` rendered as the user list: avatar + email, Role, Auth chip
+  (SSO / Fallback), status pill (Active / Inactive / Locked / Invited), and **per-status actions** matching the
+  design exactly — active → Deactivate + Lock · inactive → Activate · locked → Unlock · invited → Resend +
+  Activate. Header + footer read "N accounts · N via SSO". Invite dialog with blur validation (name required,
+  email format) creates an `invited` row.
+- **Roles** — the capability matrix, read-only, mirroring the manifest's table verbatim (11 rows × 4 roles) with
+  ✓ / — / qualified-scope chips (`team`, `team*`, `all`, `partial`, `scoped`, `full`, `own`, `request`), plus the
+  Phase-1a banner: "each user has exactly one active role. Team-Lead approval is a toggleable capability, not a
+  separate role."
+- **Integrations** — connector cards for Entra ID (connected) and eTimeOffice (error + `ETIMEDOUT · device
+unreachable`), each with credential fields, Test connection and Save. Secrets are **write-only**: the field
+  never renders a stored value and says so. A successful test clears the error banner, per the design.
+
+**This screen is the most endpoint-starved in the suite** — the manifest's own ⚠ is carried in `data.ts` and
+shapes what got built:
+
+- **Role assignment has no endpoint** (`/roles` is read-only in Phase 1a), so the Users tab's Role column is
+  **display-only — there is deliberately no role-change control.**
+- **No user-level deactivate** exists; Deactivate maps to `DELETE /employees/{id}` and the confirm copy says so.
+- **The entire Integrations tab is unbacked** (no credentials / test-connection / schedule endpoints), as is
+  **Invite** — provisioning is "JIT via SSO only", with no invite-accept path.
+
+Verified in-browser: **Admin** → all three tabs render; users table shows all four status variants with the
+right actions; roles matrix matches the manifest row-for-row; Test connection on eTimeOffice runs
+idle → testing → **Connected** and clears the ETIMEDOUT banner. **HR** → **404 at `/admin`**, no Admin console
+item in the sidebar, **no 403 panel**. `tsc -b` clean; `eslint` clean (3 pre-existing `ui/sidebar.tsx` warnings
+only). `src/components/ui/` untouched.
+
+**Admin cluster complete**: `/audit-log` (scoped/full), `/configuration` (partial/full), `/admin` (admin-only).
